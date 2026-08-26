@@ -1,0 +1,20 @@
+# G25 custom mapping app
+The following is a tool created to generate G25 distance maps using custom populations. The user can add any population from any time period wherever they desire to create their own custom presets. I have included a generic World preset which I've worked on a bit and consider to be well-made, but the user may create any preset they want.
+I wanted it to be easy to use and sidestep one of the issues with other mapping tools, and it's the lack of customizability where the only presets available are pre-made by the owner of the tool and so it's limited to however much effort and thought they put into it, and where certain features are locked behind a paywall. Customizability doesn't only extend to the reference populations or the location but also the interpolation of the gradient, its smoothness, the color of the gradient, etcetera.
+I might eventually add more features, such as a calculator function, or I might add new presets, such as an Iron Age preset, which I'm working on but is only half-decent in Europe so far. I'm open to any feedback on things user would like to see added and whatnot.
+
+## How to use
+1. Paste target G25 coordinates **and** click on "Set target".
+2. Paste reference populations and drag them to their approximate centroid and/or load a preset.
+  - Populations on the list can be searched for by name, their G25 coordinates copied, their name changed and their pin made invisible, or be deleted as a whole       if found to be superfluous.
+  - I recommend keeping "Show population pins & labels" off unless you're modifying the current preset or making a new one.
+3. Select a minimum and maximum distance, gradient color, gradient opacity, interpolation power, quality and smoothing. 
+  - I suggest using the default for all of them besides quality and smoothing. Play around with these to find the combination that works best for what you're          trying to showcase. As a rule of thumb, for lower quality you should also use lower smoothing.
+4. Click "Generate distance map".
+  - I suggest clicking on "clear map" (or at least reducing the quality to "fast") if you want to look around, change smoothing or change gradient color (as these     change the map in real time), and then generate the map again (or switch quality to "balanced" or "detailed") once you are in the area you're interested in        and you've arrived at the combination of settings you wanted. This is in order to avoid lag.
+5. You can download the image as shown in screen (the area currently shown, with the gradient smoothness you have set, etc).
+  - I suggest excluding pins from the final image, as they will clutter the image with the default settings, but this is optional. Pin visibility can be turned        off without affecting the calculation itself, so keeping pins on the exported image might look good if you're only keeping a few per country or you're mapping     a smaller region.
+  - Regarding terrain opacity, if you really want it to be visible gradient opacity should be set to around 70-75% and terrain opacity all the way up to 100%.         This configuration seems to work best.
+
+## Regarding presets
+As said before, the user can add, remove and drag around populations, either modifying the default 'Modern' preset or creating a new one from scratch to depict a different time period. Changes are **not** automatically saved. After making any change user may click "Save current", choose a name, and then click on "Export all" (Note: this button saves all of the presets on your list, so some might end up being dupped, but they can be easily deleted). This will automatically download the .json file with the G25 coordinates of every population in the preset and its geographical location (longitude and latitude). Once the .json file has been downloaded the user can safely close the tool without losing any progress. It might not be necessary to import the .json file every time, but keeping the your file updated is the safest choice in my opinion.
