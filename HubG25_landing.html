@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>HubG25</title>
+<style>
+  :root{
+    --bg-0:#12151b;
+    --bg-1:#191d25;
+    --bg-2:#20252f;
+    --line:#2c3240;
+    --text-0:#e8ebf1;
+    --text-1:#a4acbd;
+    --text-2:#6b7385;
+    --accent:#4fb8a6;
+    --accent-dim:#2f6f66;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    font-family:var(--sans);
+    background:var(--bg-0);
+    color:var(--text-0);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    position:relative;
+  }
+
+  /* subtle ambient backdrop, echoes the app's dark panel look */
+  body::before{
+    content:"";
+    position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 22% 18%, rgba(79,184,166,0.10), transparent 45%),
+      radial-gradient(circle at 82% 78%, rgba(79,184,166,0.06), transparent 50%);
+    pointer-events:none;
+  }
+  body::after{
+    content:"";
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size:42px 42px;
+    opacity:0.06;
+    pointer-events:none;
+  }
+
+  .card{
+    position:relative;
+    z-index:1;
+    background:var(--bg-1);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:48px 44px 40px;
+    width:min(420px, 88vw);
+    text-align:center;
+    box-shadow:0 24px 60px rgba(0,0,0,0.45);
+  }
+
+  .mark{
+    width:52px; height:52px;
+    margin:0 auto 22px;
+    border-radius:12px;
+    background:var(--bg-2);
+    border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .mark svg{ width:26px; height:26px; }
+
+  h1{
+    margin:0 0 8px;
+    font-size:28px;
+    font-weight:700;
+    letter-spacing:.01em;
+  }
+  h1 span{ color:var(--accent); }
+
+  p.subtitle{
+    margin:0 0 34px;
+    font-size:13px;
+    letter-spacing:.09em;
+    text-transform:uppercase;
+    color:var(--text-2);
+    font-weight:600;
+  }
+
+  .actions{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+
+  .btn{
+    font-family:var(--sans);
+    font-size:13.5px;
+    font-weight:600;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--bg-2);
+    color:var(--text-0);
+    padding:13px 16px;
+    cursor:pointer;
+    text-decoration:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:9px;
+    transition:border-color .15s ease, background .15s ease, transform .15s ease, color .15s ease;
+  }
+  .btn svg{ width:15px; height:15px; flex:none; opacity:.85; }
+  .btn:hover{
+    border-color:var(--accent-dim);
+    background:rgba(79,184,166,0.10);
+    transform:translateY(-1px);
+  }
+
+  .btn.primary{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#0d1410;
+  }
+  .btn.primary:hover{
+    background:#5ec4b2;
+    border-color:#5ec4b2;
+    transform:translateY(-1px);
+  }
+  .btn.primary svg{ opacity:1; }
+
+  footer.foot{
+    margin-top:28px;
+    font-size:10.5px;
+    letter-spacing:.04em;
+    color:var(--text-2);
+  }
+</style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#4fb8a6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="M3 12h18"></path>
+        <path d="M12 3c2.8 2.6 4.2 5.7 4.2 9s-1.4 6.4-4.2 9c-2.8-2.6-4.2-5.7-4.2-9s1.4-6.4 4.2-9z"></path>
+      </svg>
+    </div>
+
+    <h1>Hub<span>G25</span></h1>
+    <p class="subtitle">G25 tools aggregator</p>
+
+    <div class="actions">
+      <a class="btn primary" href="https://hubg25.github.io/HubG25/mapping">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 20l-5.447-2.724A1 1 0 0 1 3 16.382V5.618a1 1 0 0 1 1.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0 0 21 18.382V7.618a1 1 0 0 0-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+        </svg>
+        Mapping
+      </a>
+      <a class="btn" href="https://hubg25.github.io/HubG25/calculator">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="2" width="16" height="20" rx="2"></rect>
+          <line x1="8" y1="6" x2="16" y2="6"></line>
+          <line x1="8" y1="11" x2="8" y2="11.01"></line>
+          <line x1="12" y1="11" x2="12" y2="11.01"></line>
+          <line x1="16" y1="11" x2="16" y2="11.01"></line>
+          <line x1="8" y1="15" x2="8" y2="15.01"></line>
+          <line x1="12" y1="15" x2="12" y2="15.01"></line>
+          <line x1="16" y1="15" x2="16" y2="15.01"></line>
+          <line x1="8" y1="19" x2="8" y2="19.01"></line>
+          <line x1="12" y1="19" x2="12" y2="19.01"></line>
+        </svg>
+        Calculator
+      </a>
+    </div>
+
+    <footer class="foot">Global25 &middot; population genetics toolkit</footer>
+  </div>
+
+</body>
+</html>
