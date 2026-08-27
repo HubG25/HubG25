@@ -1,0 +1,3459 @@
+<!DOCTYPE html>
+<!-- HubG25 Admixture JS -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="HubG25: Admixture JS - Rapid estimation of admixture proportions and calculation of Euclidean distances.">
+  <title>HubG25: Admixture JS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com/">
+  <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+  <link href="./Vahaduo_ Admixture JS 22.05_files/css2" rel="stylesheet">
+  <script>if (!sessionStorage.getItem("_swa1") && document.referrer.indexOf(location.protocol + "//" + location.host) !== 0) { fetch("https://counter.dev/track?" + new URLSearchParams({ referrer: "https://www.admixjs.com", screen: screen.width + "x" + screen.height, user: "TheCount", utcoffset: "1" })) }; sessionStorage.setItem("_swa1", "1");</script>
+  <link rel="shortcut icon" href="https://casperhub.dev/favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://casperhub.dev/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://casperhub.dev/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="https://casperhub.dev/apple-touch-icon.png">
+  <link rel="manifest" href="https://casperhub.dev/site.webmanifest">
+  <style>
+
+  :root{
+    --bg-0:#12151b;
+    --bg-1:#191d25;
+    --bg-2:#20252f;
+    --line:#2c3240;
+    --text-0:#e8ebf1;
+    --text-1:#a4acbd;
+    --text-2:#6b7385;
+    --accent:#4fb8a6;
+    --accent-dim:#2f6f66;
+    --danger:#c8564b;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #2c3240 transparent;
+    box-sizing: border-box;
+  }
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background-color: var(--line); border-radius: 4px; }
+  html { height: 100%; margin: 0; background: var(--bg-0); }
+  body {
+    height: 100%; min-height: 100%; margin: 0;
+    background: var(--bg-0);
+    font-size: 13px;
+    font-family: var(--sans);
+    color: var(--text-0);
+  }
+  nav {
+    width: 100%;
+    background: rgba(25, 29, 37, 0.97);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 0.35em 0.6em 0;
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.4);
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.15em;
+  }
+  header {
+    float: none; margin-left: auto; margin-right: 0.6em;
+    text-align: right; color: var(--text-2); order: 99;
+  }
+  header div {
+    text-transform: uppercase; font-size: 0.55em;
+    letter-spacing: 0.08em; color: var(--accent);
+  }
+  a { color: inherit; text-decoration: inherit; }
+  button, label {
+    outline: none; border: none; margin: 0; cursor: pointer;
+    color: inherit; font-family: inherit;
+  }
+  .tablink {
+    display: inline-flex; align-items: center; gap: 0.4em;
+    text-transform: uppercase; padding: 0.6em 1em;
+    font-size: 0.72em; line-height: 1.4;
+    background: transparent; border-radius: 0;
+    font-weight: 600; letter-spacing: 0.06em;
+    transition: all 0.15s ease;
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+    margin-bottom: -1px;
+  }
+  .inactive {
+    background: transparent; color: var(--text-2);
+    border-bottom: 2px solid transparent;
+  }
+  .inactive:focus, .inactive:hover {
+    background: rgba(79,184,166,0.06);
+    color: var(--text-0);
+    border-bottom: 2px solid rgba(79,184,166,0.3);
+  }
+  .back-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--bg-2); border: 1px solid var(--line);
+    color: var(--text-2); cursor: pointer; text-decoration: none;
+    transition: all 0.15s ease; margin-right: 6px; flex: none;
+  }
+  .back-btn:hover {
+    background: rgba(79,184,166,0.1); color: var(--accent);
+    border-color: var(--accent-dim);
+  }
+  .back-btn svg { width: 16px; height: 16px; }
+  label { display: flex; justify-content: center; align-items: center; }
+  .buttons {
+    font-size: 0.72em; box-sizing: border-box;
+    border: 1px solid var(--line); border-radius: 6px;
+    min-height: 2.6em; padding: 0.55em 0.9em; margin-bottom: 0.45em;
+    color: var(--text-0); text-transform: uppercase;
+    background: var(--bg-2);
+    box-shadow: none; line-height: 1.2em;
+    transition: border-color .12s, background .12s;
+    font-weight: 600; letter-spacing: 0.04em;
+  }
+  .buttons:focus, .buttons:hover {
+    background: rgba(79,184,166,0.08);
+    border-color: var(--accent-dim); color: var(--text-0);
+  }
+  .buttons:active {
+    color: var(--accent); background: rgba(79,184,166,0.14);
+    border-color: var(--accent);
+  }
+  .buttons.primary {
+    background: var(--accent); border-color: var(--accent); color: #0b1613;
+    text-transform: none; letter-spacing: 0.02em;
+  }
+  .buttons.primary:hover { background: #5fc9b6; border-color: #5fc9b6; color: #0b1613; }
+  .buttons.small { padding: 0.3em 0.55em; min-height: 0; font-size: 0.7em; }
+  button:disabled { display: none; }
+  .dataButtonActive, .twodistances-first { position: relative; }
+  .dataButtonActive:after, .twodistances-first:after {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 2px;
+    background: var(--accent); content: '';
+  }
+  .tabinput, textarea.tabinput, #filteroutput, #cgenOutput {
+    box-sizing: border-box;
+    border: 1px solid var(--line); border-radius: 8px;
+    margin: 0; outline: 0; padding: 0.9em;
+    width: 100%; overflow: auto; resize: none;
+    color: var(--text-0); font-family: var(--mono);
+    font-size: 11.5px; white-space: pre;
+    background: var(--bg-2);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.25);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .tabinput:focus, #filteroutput:focus {
+    border-color: var(--accent-dim);
+    box-shadow: 0 0 0 2px rgba(79,184,166,0.12);
+  }
+  #data { height: calc(100% - 3em); }
+  #filteroutput { height: calc(100% - 6em); min-height: 12em; font-size: 11px; }
+  #notification {
+    font-size: 0.78em; box-sizing: border-box;
+    margin: 0.6em; padding: 0.55em 0.8em;
+    width: calc(100% - 1.2em); cursor: pointer; display: none;
+    border-radius: 6px; border: 1px solid var(--line);
+  }
+  #notification::before { content: "×"; font-weight: bold; margin-right: 0.8em; }
+  #multioutput { box-sizing: border-box; width: 100%; padding: 0.7em; margin-top: 0.5em; }
+  .flexcontainer-data { height: 100%; }
+  .flexcontainer-data > .rightpanel { overflow-y: auto; }
+  .flexcontainer, .flexcontainer-nr, .flexcontainer-data {
+    display: flex; width: 100%;
+  }
+  .flexcontainer-nr { flex-wrap: wrap; padding-top: 0.32em; }
+  .panel { flex-grow: 1; box-sizing: border-box; padding: 0.7em; }
+  .rightpanel { max-width: 30em; flex-basis: 36%; }
+  .leftpanel { flex-shrink: 0; flex-basis: 54%; }
+  .buttonmulti { min-width: 13em; margin: 0.4em 0 0 0.4em; }
+  .multiclearok { min-width: initial; width: 4em; }
+  .multiclearcancel { min-width: initial; width: 8.5em; }
+  .button100 { width: 100%; }
+  .button80 { width: 80%; }
+  .button20 { width: 19%; margin-right: 1%; }
+  .input20, .input-data, input[type="text"], input[type="number"], select {
+    text-align: center; background: var(--bg-2);
+    border: 1px solid var(--line); border-radius: 6px;
+    color: var(--text-0); outline: none;
+    font-family: var(--sans); font-size: 12.5px;
+    padding: 7px 9px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .input20:focus, .input-data:focus, input:focus, select:focus {
+    border-color: var(--accent-dim);
+    box-shadow: 0 0 0 2px rgba(79,184,166,0.12);
+  }
+  select {
+    -webkit-appearance: none; appearance: none; width: 100%; text-align: left;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%23a4acbd'/></svg>");
+    background-repeat: no-repeat; background-position: right 10px center; padding-right: 26px;
+  }
+  .div-100 { flex-grow: 1; display: flex; align-items: stretch; gap: 0.4em; }
+  .input20 { width: 20%; }
+  .input-data { text-transform: none; flex-grow: 1; padding: 0 0 0 1em; text-align: left; }
+  .filterReset {
+    font-weight: 600; color: var(--text-2); width: 3.5em;
+    background: var(--bg-2); flex-grow: 0; flex-shrink: 0;
+  }
+  .filteropt { display: flex; align-items: stretch; gap: 0.3em; }
+  .filteropt > button { flex-grow: 1; padding-right: 0.2em !important; padding-left: 0.2em !important; flex-basis: 8rem; }
+  #distancetargets > button, #singletargets > button, #oracletargets > button, .button-data {
+    text-transform: none;
+  }
+  table { font-size: 0.78em; border-spacing: 0; border-collapse: collapse; }
+  td, th { border-bottom: 1px solid var(--line); padding: 0.4em; }
+  .distances td, .distances th { text-align: right; }
+  .distances td:first-child { width: 8em; }
+  .distances td:nth-of-type(2), .distances th:nth-of-type(2) {
+    text-align: left; padding-left: 0.7em;
+  }
+  .distances th { padding-bottom: 0.7em; color: var(--accent); font-weight: 600; letter-spacing: 0.04em; }
+  #gradoptsdiff { display: none; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 0 0 1.2em 0; }
+  .leftpanel hr:last-of-type, #multioutput hr:last-of-type { display: none; }
+  .barchartmode2 + td { padding-left: 0.7em; }
+  .barchartmode2 { min-width: 8em; }
+  .barchartmode1 {
+    width: 100%; height: 0.5em;
+    box-shadow: inset 1px 1px 0 0 rgba(79,184,166,0.15);
+  }
+  .distances, #singleoutput > table {
+    -webkit-user-select: all; user-select: all;
+  }
+  .nonselectable {
+    -webkit-user-select: none; user-select: none;
+  }
+  ::selection { color: #0b1613; background: var(--accent); }
+  .singleinfo { font-weight: normal; }
+  .singleinfo::before { content: attr(data-nonselectable); }
+  .singleheader {
+    text-align: left; width: 100%; padding-bottom: 0.7em;
+    color: var(--accent); font-weight: 600;
+  }
+  .singleleftcolumn { text-align: right; padding-right: 0.7em; }
+  .singlerightcolumn { text-align: left; width: 100%; }
+  .multitablewrapper { overflow-x: auto; padding-bottom: 1em; }
+  .multisources { vertical-align: bottom; white-space: nowrap; }
+  .multisources div { width: 1em; transform: translate(1.5em, -0.5em) rotate(315deg); }
+  .multisources span, .multiheader span { cursor: pointer; }
+  .multiresult {
+    min-width: 2em; padding: 0.7em; color: rgba(255,255,255,0.9);
+    text-align: right; font-weight: 600; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  }
+  .multiheader {
+    text-align: center; vertical-align: bottom; padding-bottom: 0.5em;
+    color: var(--accent); font-weight: 600; letter-spacing: 0.03em;
+  }
+  .multitargets {
+    padding-right: 1em; text-align: right; cursor: pointer;
+    white-space: nowrap; font-weight: 600; color: var(--text-1);
+    transition: color 0.15s;
+  }
+  .multitargets:hover { color: var(--accent); }
+  .multidistance {
+    padding: 0.7em; background: rgba(79,184,166,0.04);
+    border-left: 1px solid rgba(79,184,166,0.08);
+    border-right: 1px solid rgba(79,184,166,0.08);
+  }
+  .multidistchart { padding: 0; min-width: 6em; }
+  input[type="file"] { display: none; }
+  input { font-family: inherit; }
+  .field { margin-bottom: 10px; }
+  .field-label {
+    display: block; font-size: 11px; color: var(--text-1); margin: 0 0 5px;
+    text-align: left; justify-content: flex-start;
+  }
+  .hint { font-size: 10.5px; color: var(--text-2); line-height: 1.5; margin-top: 6px; }
+  .row2 { display: flex; gap: 8px; }
+  .row2 > * { flex: 1; }
+  .btn-row { display: flex; gap: 8px; margin-top: 8px; }
+  .cgen-mode-row { margin-bottom: 8px; }
+  .cgen-list {
+    margin-top: 10px; max-height: 220px; overflow-y: auto;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--bg-1);
+  }
+  .cgen-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-bottom: 1px solid var(--line);
+    font-size: 12px; color: var(--text-1);
+  }
+  .cgen-row:last-child { border-bottom: none; }
+  .cgen-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-0); }
+  .cgen-meta { font-family: var(--mono); font-size: 11px; color: var(--text-2); }
+  .cgen-n {
+    width: 64px; text-align: center; padding: 4px 6px; font-size: 12px;
+  }
+  .cgen-sum {
+    margin-top: 8px; font-size: 12px; font-weight: 600;
+    font-family: var(--mono); color: var(--text-1);
+  }
+  #theme-toggle {
+    display: flex; align-items: center; gap: 0.45em;
+    margin: 0.35em 0.5em 0 0; cursor: pointer; user-select: none;
+    color: var(--text-2); font-size: 0.72em; font-weight: 500; letter-spacing: 0.04em;
+  }
+  #theme-toggle .toggle-track {
+    position: relative; width: 2.6em; height: 1.4em;
+    background: rgba(79,184,166,0.15); border: 1px solid rgba(79,184,166,0.3);
+    border-radius: 99px; transition: background 0.25s, border-color 0.25s;
+  }
+  #theme-toggle .toggle-thumb {
+    position: absolute; top: 50%; left: 0.15em; transform: translateY(-50%);
+    width: 1.05em; height: 1.05em; border-radius: 50%;
+    background: var(--accent); transition: left 0.25s, background 0.25s;
+  }
+  body.light-theme #theme-toggle .toggle-track {
+    background: rgba(255,180,0,0.15); border-color: rgba(255,180,0,0.4);
+  }
+  body.light-theme #theme-toggle .toggle-thumb {
+    left: calc(100% - 1.2em); background: #f59e0b;
+  }
+  body.light-theme {
+    background: #e8eaef; color: #1c2128;
+    --bg-0: #e8eaef; --bg-1: #f4f5f7; --bg-2: #ffffff;
+    --line: #c8cdd6; --text-0: #1c2128; --text-1: #4a5260; --text-2: #6b7385;
+    --accent: #2f8f7f; --accent-dim: #247066;
+  }
+  body.light-theme nav {
+    background: rgba(244,245,247,0.97); border-bottom: 1px solid var(--line);
+  }
+  body.light-theme .tabinput, body.light-theme #filteroutput {
+    background: #fff; color: #1c2128;
+  }
+  body.light-theme .buttons { background: #fff; color: #1c2128; }
+  @media only screen and (max-width: 639px) {
+    .flexcontainer, .flexcontainer-data { flex-direction: column-reverse; }
+    .rightpanel { max-width: none; }
+    .flexcontainer-data > .rightpanel { overflow-y: initial; }
+    .flexcontainer-data { height: initial; min-height: 100%; }
+    #filteroutput { min-height: 50vh; }
+  }
+
+
+  .st-lookup-bar {
+    display: flex; align-items: center; gap: 0.4em;
+    padding: 0.45em 0.5em;
+    background: var(--bg-1);
+    border-bottom: 1px solid var(--line);
+  }
+  .st-lookup-input {
+    flex: 1; text-align: left !important;
+    background: var(--bg-2) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 6px !important;
+    color: var(--text-0) !important;
+    padding: 8px 10px !important;
+    font-size: 12.5px !important;
+    font-family: var(--sans) !important;
+  }
+  .cgen-text-input {
+    width: 100% !important;
+    text-align: left !important;
+    background: var(--bg-2) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 6px !important;
+    color: var(--text-0) !important;
+    padding: 8px 10px !important;
+    font-size: 12.5px !important;
+    font-family: var(--sans) !important;
+  }
+  .cgen-textarea {
+    width: 100%;
+    min-height: 88px;
+    background: var(--bg-2) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 8px !important;
+    color: var(--text-0) !important;
+    padding: 10px 12px !important;
+    font-size: 11.5px !important;
+    font-family: var(--mono) !important;
+    resize: vertical;
+    white-space: pre;
+    line-height: 1.45;
+  }
+  .cgen-textarea:focus, .cgen-text-input:focus, .st-lookup-input:focus {
+    border-color: var(--accent-dim) !important;
+    box-shadow: 0 0 0 2px rgba(79,184,166,0.12) !important;
+    outline: none;
+  }
+  .cgen-output { min-height: 140px; height: 16em; }
+  .pie-wrap {
+    display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px;
+    margin: 12px 0 8px; padding: 12px;
+    background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px;
+  }
+  .pie-svg { flex: none; border-radius: 50%; }
+  .pie-legend {
+    flex: 1; min-width: 160px; max-height: 220px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .pie-leg-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11.5px; color: var(--text-1);
+  }
+  .pie-swatch {
+    width: 11px; height: 11px; border-radius: 3px; flex: none;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .pie-leg-pct {
+    font-family: var(--mono); font-size: 11px; color: var(--text-0);
+    width: 42px; text-align: right; flex: none;
+  }
+  .pie-leg-name {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+</style>
+  <script>
+    let inputHasChanged = false, sourceArray, targetArray,
+      sourceNum, targetNum, dimensions, addGradient = true,
+      printZeroes = false, aggregate = true, addBarChart = 1,
+      printZeroesMulti = false, aggregateMulti = true,
+      fastModeMulti = false, cyclesX = 1, cyclesXMulti = 1,
+      addDistCol = 1, addDistColMulti = 1, addDistColRecal = true,
+      addDistColMultiRecal = true, distMode = 0, twoDistClicked = false,
+      twoDistFirst = false, nPop = 0, af = false, addRep = false,
+      dataListId = 0, dataStore = [], dataActive = -1, dataCurrent = false,
+      oracleMode = 0, oracleAddGradient = true, oracleIterationMode = false,
+      oracleFixedPop = false, oracleFixedRangemode = 1,
+      distMetricMode = 0, notificationTimeout; /* Euclidean only */
+
+    const G25_EIGENVALUES = [
+      129.557, 103.13, 14.222, 10.433, 9.471, 7.778, 5.523, 5.325, 4.183, 3.321,
+      2.637, 2.246, 2.21, 1.894, 1.842, 1.758, 1.7, 1.605, 1.58, 1.564, 1.557,
+      1.529, 1.519, 1.452, 1.434
+    ];
+    const G25_EV_TOTAL = G25_EIGENVALUES.reduce((a, b) => a + b, 0);
+    const G25_WEIGHTS = G25_EIGENVALUES.map(v => v / G25_EV_TOTAL);
+
+    
+    // Datasets are auto-discovered from the same GitHub repo as files named "[Name]_dataset.txt"
+    const DATASET_REPO = "Kerimcanak/VahaduoSpreadsheets";
+    const DATASET_BRANCH = "main";
+    const DATASET_API = `https://api.github.com/repos/${DATASET_REPO}/contents/?ref=${DATASET_BRANCH}`;
+    const DATASET_RAW = `https://raw.githubusercontent.com/${DATASET_REPO}/${DATASET_BRANCH}/`;
+    let discoveredDatasets = []; // { name, file, url }
+
+    async function discoverDatasets() {
+      const containers = [
+        document.getElementById("datasetButtonsLoad"),
+        document.getElementById("datasetButtonsDownload"),
+        document.getElementById("datasetButtonsSource")
+      ];
+      containers.forEach(c => { if (c) c.innerHTML = '<div class="hint" style="padding:8px;">Loading datasets from GitHub…</div>'; });
+      try {
+        const res = await fetch(DATASET_API, { headers: { Accept: "application/vnd.github+json" } });
+        if (!res.ok) throw new Error("GitHub API " + res.status);
+        const files = await res.json();
+        if (!Array.isArray(files)) throw new Error("Unexpected API response");
+        discoveredDatasets = files
+          .filter(f => f && f.type === "file" && /_dataset\.txt$/i.test(f.name))
+          .map(f => {
+            const base = f.name.replace(/_dataset\.txt$/i, "");
+            const label = base.replace(/[_]+/g, " ").trim();
+            return { name: label || base, file: f.name, url: f.download_url || (DATASET_RAW + encodeURIComponent(f.name).replace(/%2F/g, "/")) };
+          })
+          .sort((a, b) => a.name.localeCompare(b.name));
+        renderDatasetButtons();
+        if (!discoveredDatasets.length) {
+          containers.forEach(c => {
+            if (c) c.innerHTML = '<div class="hint" style="padding:8px;">No files matching *_dataset.txt found in the GitHub repo.</div>';
+          });
+        }
+      } catch (err) {
+        console.error("Dataset discovery failed:", err);
+        containers.forEach(c => {
+          if (c) c.innerHTML = '<div class="hint" style="padding:8px;color:var(--danger);">Could not load dataset list from GitHub. You can still open local files.</div>';
+        });
+      }
+    }
+
+    function renderDatasetButtons() {
+      const loadHtml = discoveredDatasets.map((d, i) =>
+        `<button class="buttons" style="flex:1; min-width:140px; font-size:0.85em; text-transform:none; padding:0.4em;" onclick="loadReadySet(${i})">${escapeHtml(d.name)}</button>`
+      ).join("");
+      const dlHtml = discoveredDatasets.map((d, i) =>
+        `<button class="buttons button100 button-data" onclick="downloadReadySet(${i})">${escapeHtml(d.name)}</button>`
+      ).join("");
+      const srcHtml = discoveredDatasets.map((d, i) =>
+        `<button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(${i})">${escapeHtml(d.name)}</button>`
+      ).join("");
+      const elL = document.getElementById("datasetButtonsLoad");
+      const elD = document.getElementById("datasetButtonsDownload");
+      const elS = document.getElementById("datasetButtonsSource");
+      if (elL) elL.innerHTML = loadHtml || '<div class="hint">No datasets.</div>';
+      if (elD) elD.innerHTML = dlHtml || '';
+      if (elS) elS.innerHTML = srcHtml || '';
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    async function fetchDatasetText(indexOrUrl) {
+      let url;
+      if (typeof indexOrUrl === "number") {
+        if (!discoveredDatasets[indexOrUrl]) throw new Error("Unknown dataset");
+        url = discoveredDatasets[indexOrUrl].url;
+      } else {
+        url = indexOrUrl;
+      }
+      const res = await fetch(url, { cache: "no-cache" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return await res.text();
+    }
+
+    function showNotification(message, error = 0) {
+      const notification = document.getElementById("notification");
+      notification.innerHTML = message;
+      notification.style.display = "block";
+      if (error) {
+        notification.style.backgroundColor = "red";
+        notification.style.color = "white";
+      } else {
+        notification.style.backgroundColor = "yellow";
+        notification.style.color = "#666";
+      }
+      clearTimeout(notificationTimeout);
+      if (!error) {
+        notificationTimeout = setTimeout(clearNotification, 5000);
+      }
+    }
+
+    function clearNotification() {
+      const elmnt = document.getElementById("notification");
+      elmnt.innerHTML = "";
+      elmnt.style.display = "none";
+    }
+
+    function clearOutput(elmnt, action, display = "block") {
+      if (action == "confirm") {
+        elmnt.nextElementSibling.style.display = display;
+        elmnt.style.display = "none";
+      } else if (action == "cancel") {
+        elmnt.parentNode.previousElementSibling.style.display = display;
+        elmnt.parentNode.style.display = "none";
+      } else {
+        document.getElementById(action).innerHTML = "";
+        elmnt.parentNode.previousElementSibling.style.display = display;
+        elmnt.parentNode.style.display = "none";
+      }
+    }
+
+    function toggleOptions(option, elmnt) {
+      let msg;
+      function toggleOption(currentValue, msg) {
+        if (currentValue) {
+          elmnt.innerHTML = msg + "no";
+        } else {
+          elmnt.innerHTML = msg + "yes";
+        }
+      }
+      switch (option) {
+        case "printZeroes":
+          toggleOption(printZeroes, "print&nbsp;zeroes&nbsp;-&nbsp;");
+          printZeroes = !printZeroes;
+          break;
+        case "aggregate":
+          toggleOption(aggregate, "aggregate&nbsp;-&nbsp;");
+          aggregate = !aggregate;
+          break;
+        case "printZeroesMulti":
+          toggleOption(printZeroesMulti, "print&nbsp;zeroes&nbsp;-&nbsp;");
+          printZeroesMulti = !printZeroesMulti;
+          break;
+        case "aggregateMulti":
+          toggleOption(aggregateMulti, "aggregate&nbsp;-&nbsp;");
+          aggregateMulti = !aggregateMulti;
+          break;
+        case "fastModeMulti":
+          toggleOption(fastModeMulti, "fast&nbsp;mode&nbsp;-&nbsp;");
+          fastModeMulti = !fastModeMulti;
+          break;
+        case "cyclesX":
+          cyclesX == 16 ? cyclesX = 1 : cyclesX *= 2;
+          elmnt.innerHTML = "cycles&nbsp;-&nbsp;" + cyclesX / 4 + "x";
+          break;
+        case "cyclesXMulti":
+          cyclesXMulti == 16 ? cyclesXMulti = 1 : cyclesXMulti *= 2;
+          elmnt.innerHTML = "cycles&nbsp;-&nbsp;" + cyclesXMulti / 4 + "x";
+          break;
+        case "addDistCol":
+          addDistCol == 16 ? addDistCol = 1 : addDistCol *= 2;
+          msg = (addDistCol == 1 ? "no" : addDistCol / 8 + "x");
+          elmnt.innerHTML = "add&nbsp;dist&nbsp;col&nbsp;-&nbsp;" + msg;
+          if (addDistCol == 1) {
+            document.getElementById("adcrecal").disabled = true;
+          } else if (addDistCol == 2) {
+            document.getElementById("adcrecal").disabled = false;
+          }
+          break;
+        case "addDistColMulti":
+          addDistColMulti == 16 ? addDistColMulti = 1 : addDistColMulti *= 2;
+          msg = (addDistColMulti == 1 ? "no" : addDistColMulti / 8 + "x");
+          elmnt.innerHTML = "add&nbsp;dist&nbsp;col&nbsp;-&nbsp;" + msg;
+          if (addDistColMulti == 1) {
+            document.getElementById("adcmrecal").disabled = true;
+          } else if (addDistColMulti == 2) {
+            document.getElementById("adcmrecal").disabled = false;
+          }
+          break;
+        case "addDistColRecal":
+          toggleOption(addDistColRecal, "recalculate&nbsp;-&nbsp;");
+          addDistColRecal = !addDistColRecal;
+          break;
+        case "addDistColMultiRecal":
+          toggleOption(addDistColMultiRecal, "recalculate&nbsp;-&nbsp;");
+          addDistColMultiRecal = !addDistColMultiRecal;
+          break;
+        case "nPop":
+          nPop == 0 ? nPop = 3 : nPop += 1;
+          if (nPop > 5) nPop = 0;
+          msg = (nPop == 0 ? "no" : nPop + " populations");
+          elmnt.innerHTML = "reduce&nbsp;-&nbsp;" + msg;
+          break;
+        case "addBarChart":
+          addBarChart == 2 ? addBarChart = 0 : addBarChart += 1;
+          msg = (addBarChart == 0 ? "no" : "mode&nbsp;" + addBarChart);
+          elmnt.innerHTML = "add&nbsp;bar&nbsp;chart&nbsp;-&nbsp;" + msg;
+          break;
+        case "distMode":
+          distMode == 3 ? distMode = 0 : distMode += 1;
+          switch (distMode) {
+            case 0:
+              msg = "single";
+              document.getElementById("gradopts").style.display = "block";
+              document.getElementById("gradoptsdiff").style.display = "none";
+              clearTwoDistOpt();
+              break;
+            case 1:
+              msg = "difference&nbsp;(&nbsp;ac&nbsp;-&nbsp;bc&nbsp;)";
+              document.getElementById("gradopts").style.display = "none";
+              document.getElementById("gradoptsdiff").style.display = "block";
+              break;
+            case 2:
+              msg = "ratio&nbsp;(&nbsp;ac&nbsp;/&nbsp;bc&nbsp;)";
+              document.getElementById("gradoptsdiff").style.display = "none";
+              break;
+            case 3:
+              msg = "d3&nbsp;(&nbsp;ac&nbsp;-&nbsp;bc&nbsp;)&nbsp;/&nbsp;(&nbsp;ac&nbsp;+&nbsp;bc&nbsp;)";
+              break;
+          }
+          elmnt.innerHTML = "mode&nbsp;-&nbsp;" + msg;
+          break;
+        case "oracleMode":
+          oracleMode == 2 ? oracleMode = 0 : oracleMode += 1;
+          switch (oracleMode) {
+            case 0: msg = "2-way"; break;
+            case 1: msg = "3-way"; break;
+            case 2: msg = "4-way"; break;
+          }
+          elmnt.innerHTML = "mode&nbsp;-&nbsp;" + msg;
+          break;
+        case "oracleIterationMode":
+          msg = "iteration&nbsp;mode&nbsp;-&nbsp;";
+          if (oracleIterationMode) {
+            elmnt.innerHTML = msg + "off";
+          } else {
+            elmnt.innerHTML = msg + "on";
+          }
+          oracleIterationMode = !oracleIterationMode;
+          break;
+        case "oracleFixedPop":
+          msg = "fixed&nbsp;source&nbsp;pop&nbsp;-&nbsp;";
+          if (oracleFixedPop) {
+            elmnt.nextElementSibling.style.display = "none";
+            elmnt.innerHTML = msg + "off";
+          } else {
+            elmnt.nextElementSibling.style.display = "block";
+            elmnt.innerHTML = msg + "on";
+          }
+          oracleFixedPop = !oracleFixedPop;
+          break;
+        case "oracleFixedRangemode":
+          msg = "weight&nbsp;limits&nbsp;-&nbsp;";
+          if (oracleFixedRangemode === 1) {
+            oracleFixedRangemode = 2;
+            elmnt.innerHTML = msg + "reject";
+          } else {
+            oracleFixedRangemode = 1;
+            elmnt.innerHTML = msg + "constrain";
+          }
+          break;
+        case "oracleAddGradient":
+          msg = "add&nbsp;gradient&nbsp;-&nbsp;";
+          if (oracleAddGradient) {
+            elmnt.nextElementSibling.style.display = "none";
+            elmnt.innerHTML = msg + "no";
+          } else {
+            elmnt.nextElementSibling.style.display = "block";
+            elmnt.innerHTML = msg + "yes";
+          }
+          oracleAddGradient = !oracleAddGradient;
+          break;
+        case "addGradient":
+          msg = "add&nbsp;gradient&nbsp;-&nbsp;";
+          if (addGradient) {
+            elmnt.nextElementSibling.style.display = "none";
+            elmnt.innerHTML = msg + "no";
+          } else {
+            elmnt.nextElementSibling.style.display = "block";
+            elmnt.innerHTML = msg + "yes";
+          }
+          addGradient = !addGradient;
+          break;
+        case "addRep":
+          if (addRep) {
+            elmnt.innerHTML = "Add&nbsp;to:";
+          } else {
+            elmnt.innerHTML = "Replace:";
+          }
+          addRep = !addRep;
+          break;
+      }
+    }
+
+    function validateDistMaxOut(elmnt) {
+      const nextValue = Number(elmnt.value.replace(/\,/g, '\.'));
+      if (Number.isInteger(nextValue) && nextValue > 0) {
+        elmnt.value = nextValue;
+      } else {
+        elmnt.value = elmnt.defaultValue;
+      }
+    }
+
+    function validateGradFromTo(elmnt) {
+      const nextValue = Number(elmnt.value.replace(/\,/g, '\.'));
+      if (isNaN(nextValue) || nextValue < 0) {
+        elmnt.value = elmnt.defaultValue;
+      } else {
+        elmnt.value = nextValue;
+      }
+    }
+
+    function dispatcher(elmnt, targetId) {
+      if (elmnt.parentNode.id == "distancetargets") {
+        if (distMode == 0) {
+          distances(targetId);
+        } else {
+          twoDistances(targetId, elmnt);
+        }
+      } else if (elmnt.parentNode.id == "oracletargets") {
+        runOracle(targetId);
+      } else {
+        singleFMC(targetId);
+      }
+    }
+    function runAllOracle() {
+      let i;
+      for (i = 0; i < targetNum; i++) {
+        runOracle(i);
+      }
+    }
+
+    function runAllDist() {
+      let i;
+      if (distMode == 0) {
+        for (i = 0; i < targetNum; i++) {
+          distances(i);
+        }
+      } else {
+        if (targetNum < 2) {
+          showNotification("At least two TARGET samples are needed to make a comparison.", 0);
+        } else if (twoDistFirst === false) {
+          showNotification("Select first TARGET sample to make a comparison.", 0);
+        } else {
+          for (i = 0; i < targetNum; i++) {
+            if (i !== twoDistFirst) {
+              twoDistances(i);
+            }
+          }
+        }
+      }
+    }
+
+    function runAllSingle() {
+      let i;
+      for (i = 0; i < targetNum; i++) {
+        singleFMC(i);
+      }
+    }
+
+    function randomFromRange(min, max) {
+      return Math.floor(Math.random() * (max - min)) + min;
+    }
+
+    function subArray(arr1, arr2) {
+      const subtracted = arr1.map(function (elmnt, index) {
+        return elmnt - arr2[index];
+      });
+      return subtracted;
+    }
+
+    function addArray(arr1, arr2) {
+      const added = arr1.map(function (elmnt, index) {
+        return elmnt + arr2[index];
+      });
+      return added;
+    }
+
+    function getArraySum(arr) {
+      function arrSum(total, num) {
+        return total + num;
+      }
+      return arr.reduce(arrSum);
+    }
+
+    function squareArray(arr) {
+      const squared = arr.map(function (elmnt) {
+        return elmnt * elmnt;
+      });
+      return squared;
+    }
+
+    function getDistWeights() {
+      // Euclidean only — weighted metric removed
+      return null;
+    }
+
+    function weightedSumSq(arr) {
+      const _W = getDistWeights();
+      if (!_W) {
+        let s = 0;
+        for (let i = 0; i < arr.length; i++) s += arr[i] * arr[i];
+        return s;
+      }
+      let s = 0;
+      const wLen = Math.min(arr.length, _W.length);
+      for (let i = 0; i < wLen; i++) s += _W[i] * arr[i] * arr[i];
+      for (let i = wLen; i < arr.length; i++) s += arr[i] * arr[i];
+      return s;
+    }
+
+    function cycleDistMetric() { /* removed: Euclidean only */ }
+
+    function clearTwoDistOpt() {
+      if (twoDistClicked !== false) {
+        twoDistClicked.classList.remove("twodistances-first");
+        twoDistClicked = false;
+      }
+      twoDistFirst = false;
+    }
+
+    function twoDistances(targetId, elmnt) {
+      if (targetNum < 2) {
+        showNotification("At least two TARGET samples are needed to make a comparison.", 0);
+        return;
+      }
+      if (twoDistFirst === false) {
+        twoDistFirst = targetId;
+        twoDistClicked = elmnt;
+        twoDistClicked.classList.add("twodistances-first");
+        return;
+      }
+      if (twoDistFirst === targetId) {
+        twoDistClicked.classList.remove("twodistances-first");
+        twoDistClicked = false;
+        twoDistFirst = false;
+        return;
+      }
+      let i, output = "", resultsNum, getDistanceA, getDistanceB,
+        distanceCurrent, compare, comparisonType = "", comparisonValue,
+        distMaxOut = document.getElementById("distmaxout").value;
+      const targetA = targetArray[twoDistFirst].slice(),
+        targetB = targetArray[targetId].slice(), distances = [],
+        gradFrom = document.getElementById("gradfromdiff").value,
+        gradTo = document.getElementById("gradtodiff").value;
+
+      function ratio(l, r) {
+        return l / r;
+      }
+
+      function diff(l, r) {
+        return l - r;
+      }
+
+      function d3(l, r) {
+        return (l - r) / (l + r);
+      }
+
+      function dist(currentTarget1, currentTarget2) {
+        let getDistance = subArray(currentTarget2, currentTarget1);
+        getDistance.shift();
+        return Math.sqrt(weightedSumSq(getDistance));
+      }
+
+      function retrieveSrcArrEl(currentSource) {
+        return sourceArray[currentSource];
+      }
+
+      function upperDecorator(distance) {
+        let output = "";
+        if (addGradient) {
+          output += ' style="color:black;background-color:hsl(';
+          if (distMode == 1) {
+            let distAbs = Math.abs(distance);
+            if (distAbs < gradFrom) {
+              output += 120;
+            } else if (distAbs > gradTo) {
+              output += 0;
+            } else {
+              output += 120 - (((distAbs - gradFrom) / (gradTo - gradFrom)) * 120);
+            }
+          } else if (distMode == 2) {
+            output += (120 - distance * 120);
+          } else {
+            output += 120 - (distance * 120);
+          }
+          output += ', 70%, 48%)"';
+        }
+        return output + ">" + distance.toFixed(8);
+      }
+      function lowerDecorator(distance) {
+        let output = "";
+        if (addGradient) {
+          output += ' style="color:black;background-color:hsl(';
+          if (distMode == 1) {
+            if (distance < gradFrom) {
+              output += 120;
+            } else if (distance > gradTo) {
+              output += 0;
+            } else {
+              output += 120 - (((distance - gradFrom) / (gradTo - gradFrom)) * 120);
+            }
+          } else if (distMode == 2) {
+            output += (0 + 1 / distance * 120);
+          } else {
+            output += 120 - (distance * 120);
+          }
+          output += ', 70%, 48%)"';
+        }
+        return output + ">" + distance.toFixed(8);
+      }
+
+
+      switch (distMode) {
+        case 1:
+          comparisonType = "difference:&nbsp;(&nbsp;AC&nbsp;-&nbsp;BC&nbsp;)";
+          compare = diff;
+          comparisonValue = 0;
+          break;
+        case 2:
+          comparisonType = "ratio:&nbsp;(&nbsp;AC&nbsp;/&nbsp;BC&nbsp;)";
+          compare = ratio;
+          comparisonValue = 1;
+          break;
+        case 3:
+          comparisonType = "D3:&nbsp;(&nbsp;AC&nbsp;-&nbsp;BC&nbsp;)&nbsp;/&nbsp;(&nbsp;AC&nbsp;+&nbsp;BC&nbsp;)";
+          compare = d3;
+          comparisonValue = 0;
+          break;
+      }
+      for (i = 0; i < sourceNum; i++) {
+        getDistanceL = dist(retrieveSrcArrEl(i), targetA);
+        getDistanceR = dist(retrieveSrcArrEl(i), targetB);
+        if (getDistanceL > 0 && getDistanceR > 0) {
+          let tempArr = ['', ''];
+          tempArr[0] = sourceArray[i][0];
+          tempArr[1] = compare(getDistanceL, getDistanceR);
+          distances.push(tempArr);
+        }
+      }
+      resultsNum = distances.length;
+      if (resultsNum < distMaxOut) {
+        distMaxOut = resultsNum;
+      }
+      distances.sort(function (a, b) {
+        return b[1] - a[1];
+      });
+
+      output += '<table class="distances"><tr><th colspan="2" style="text-align:left">Distance&nbsp;' + comparisonType + ' &uarr;' + '<br>A:&nbsp;' + targetA[0] + "<br>B:&nbsp;" + targetB[0] + "<br>C:&nbsp;&#8628;</th>";
+      for (i = 0; i < distMaxOut; i++) {
+        distanceCurrent = distances[resultsNum - 1 - i][1];
+        if (distanceCurrent >= comparisonValue) {
+          if (i == 0) {
+            output += "<tr><td colspan='2' style='text-align:center'>No values below " + comparisonValue + ".</td></tr>";
+          }
+          break;
+        }
+        output += "<tr><td" + upperDecorator(distanceCurrent) + "</td><td>" + distances[resultsNum - 1 - i][0] + "</td></tr>";
+      }
+      output += "</table><br>";
+
+      output += '<table class="distances"><tr><th colspan="2" style="text-align:left">Distance&nbsp;' + comparisonType + ' &darr;' + '<br>A:&nbsp;' + targetA[0] + "<br>B:&nbsp;" + targetB[0] + "<br>C:&nbsp;&#8628;</th>";
+      for (i = 0; i < distMaxOut; i++) {
+        distanceCurrent = distances[i][1];
+        if (distanceCurrent <= comparisonValue) {
+          if (i == 0) {
+            output += "<tr><td colspan='2' style='text-align:center'>No values above " + comparisonValue + ".</td></tr>";
+          }
+          break;
+        }
+        output += "<tr><td" + lowerDecorator(distanceCurrent) + "</td><td>" + distances[i][0] + "</td></tr>";
+      }
+      output += "</table>";
+
+      printOutput(output, "distanceoutput");
+    }
+
+    function distances(targetId) {
+      let i, output = "", resultsNum, getDistance, distanceCurrent,
+        gradStyle1 = "", gradStyle2 = "", gradHSL = "",
+        distMaxOut = document.getElementById("distmaxout").value;
+      const target = targetArray[targetId].slice(),
+        distances = Array(sourceNum).fill([]),
+        gradFrom = document.getElementById("gradfrom").value,
+        gradTo = document.getElementById("gradto").value;
+      for (i = 0; i < sourceNum; i++) {
+        getDistance = subArray(target, sourceArray[i]);
+        getDistance.shift();
+        getDistance = Math.sqrt(weightedSumSq(getDistance));
+        distances[i] = distances[i].concat(sourceArray[i][0]);
+        distances[i].push(getDistance);
+      }
+      distances.sort(function (a, b) {
+        return a[1] - b[1];
+      });
+      resultsNum = sourceNum;
+      if (target[0] === distances[0][0]) {
+        distances.shift();
+        resultsNum--;
+      }
+      if (resultsNum < distMaxOut) {
+        distMaxOut = resultsNum;
+      }
+      if (addGradient) {
+        gradStyle1 = ' style="color:black;background-color:hsl(';
+        gradStyle2 = ', 70%, 48%)"';
+      }
+      output += '<table class="distances"><tr><th>Distance&nbsp;to:</th><th>' + target[0] + "</th>";
+      for (i = 0; i < distMaxOut; i++) {
+        distanceCurrent = distances[i][1];
+        if (addGradient) {
+          if (distanceCurrent < gradFrom) {
+            gradHSL = 120;
+          } else if (distanceCurrent > gradTo) {
+            gradHSL = 0;
+          } else {
+            gradHSL = 120 - (((distanceCurrent - gradFrom) / (gradTo - gradFrom)) * 120);
+          }
+        }
+        output += "<tr><td" + gradStyle1 + gradHSL + gradStyle2 + ">" + distanceCurrent.toFixed(8) + "</td><td>" + distances[i][0] + "</td></tr>";
+      }
+      output += "</table>";
+      printOutput(output, "distanceoutput");
+    }
+
+    function runOracle(targetId) {
+      let output = "", distMaxOut = parseInt(document.getElementById("oraclemaxout").value);
+      if (isNaN(distMaxOut) || distMaxOut < 1) distMaxOut = 25;
+      const target = targetArray[targetId].slice(1), gradFrom = document.getElementById("oraclegradfrom").value, gradTo = document.getElementById("oraclegradto").value;
+
+      let fixedIdx = -1, fixedMin = 0, fixedMax = 1;
+      if (oracleFixedPop) {
+        let fixedPopInputStr = document.getElementById("oracleFixedPopInput").value.trim();
+        for (let i = 0; i < sourceNum; i++) {
+          if (sourceArray[i][0] === fixedPopInputStr) { fixedIdx = i; break; }
+        }
+        if (fixedIdx !== -1) {
+          fixedMin = parseFloat(document.getElementById("oracleFixedMin").value) / 100;
+          fixedMax = parseFloat(document.getElementById("oracleFixedMax").value) / 100;
+          if (isNaN(fixedMin)) fixedMin = 0;
+          if (isNaN(fixedMax)) fixedMax = 1;
+        }
+      }
+
+      let S = new Float64Array(sourceNum * dimensions);
+      for (let i = 0; i < sourceNum; i++) {
+        for (let c = 0; c < dimensions; c++) S[i * dimensions + c] = sourceArray[i][c + 1];
+      }
+
+      const _W = (distMetricMode !== 0 && dimensions <= G25_WEIGHTS.length) ? getDistWeights() : null;
+
+      const targetLabel = targetArray[targetId][0].split(',')[0];
+      const excludeSrc = new Int8Array(sourceNum);
+      for (let i = 0; i < sourceNum; i++) {
+        if (sourceArray[i][0].split(',')[0] === targetLabel) excludeSrc[i] = 1;
+      }
+
+      let dT = new Float64Array(sourceNum);
+      for (let i = 0; i < sourceNum; i++) {
+        let d = 0;
+        let rowI = i * dimensions;
+        for (let c = 0; c < dimensions; c++) { let diff = target[c] - S[rowI + c]; d += (_W ? _W[c] : 1) * diff * diff; }
+        dT[i] = d;
+      }
+
+      let getAdmix = function (indices) {
+        let N = indices.length; let w = new Float64Array(N); w.fill(1 / N);
+        if (N === 1) return { dist: Math.sqrt(dT[indices[0]]), weights: [1] };
+        else if (N === 2) {
+          let i = indices[0], j = indices[1], d1 = dT[i], d2 = dT[j];
+          let d12 = 0, rowI = i * dimensions, rowJ = j * dimensions;
+          for (let c = 0; c < dimensions; c++) { let diff = S[rowI + c] - S[rowJ + c]; d12 += (_W ? _W[c] : 1) * diff * diff; }
+          let frac = d12 === 0 ? 0.5 : (d12 + d2 - d1) / (2 * d12);
+          if (frac > 1) frac = 1; else if (frac < 0) frac = 0;
+          let w_i = frac, w_j = 1 - frac;
+          if (fixedIdx !== -1) {
+            let fPos = (indices[0] === fixedIdx) ? 0 : (indices[1] === fixedIdx ? 1 : -1);
+            if (fPos !== -1) {
+              let w_f = (fPos === 0) ? w_i : w_j;
+              if (oracleFixedRangemode === 2 && (w_f < fixedMin - 1e-4 || w_f > fixedMax + 1e-4)) return { dist: Infinity, weights: [w_i, w_j] };
+              if (oracleFixedRangemode === 1 && (w_f < fixedMin || w_f > fixedMax)) {
+                w_f = w_f < fixedMin ? fixedMin : fixedMax;
+                w_i = (fPos === 0) ? w_f : (1 - w_f);
+                w_j = 1 - w_i;
+              }
+            }
+          }
+          let distSq = 0;
+          let rowI_N2 = indices[0] * dimensions, rowJ_N2 = indices[1] * dimensions;
+          for (let c = 0; c < dimensions; c++) { let diff = target[c] - (w_i * S[rowI_N2 + c] + w_j * S[rowJ_N2 + c]); distSq += (_W ? _W[c] : 1) * diff * diff; }
+          return { dist: Math.sqrt(Math.max(0, distSq)), weights: [w_i, w_j] };
+        } else {
+          for (let iter = 0; iter < 8; iter++) {
+            for (let i2 = 0; i2 < N - 1; i2++) {
+              for (let j2 = i2 + 1; j2 < N; j2++) {
+                let W = w[i2] + w[j2];
+                if (W < 1e-7) continue;
+                let i = indices[i2], j = indices[j2], d1 = 0, d2 = 0;
+                let d12 = 0, rowI = i * dimensions, rowJ = j * dimensions;
+                for (let c = 0; c < dimensions; c++) { let diff = S[rowI + c] - S[rowJ + c]; d12 += (_W ? _W[c] : 1) * diff * diff; }
+                for (let c = 0; c < dimensions; c++) {
+                  let S_rem = 0;
+                  for (let k2 = 0; k2 < N; k2++) if (k2 !== i2 && k2 !== j2) S_rem += w[k2] * S[indices[k2] * dimensions + c];
+                  let T_mod = (target[c] - S_rem) / W;
+                  let diff1 = T_mod - S[rowI + c]; d1 += (_W ? _W[c] : 1) * diff1 * diff1;
+                  let diff2 = T_mod - S[rowJ + c]; d2 += (_W ? _W[c] : 1) * diff2 * diff2;
+                }
+                let frac = d12 === 0 ? 0.5 : (d12 + d2 - d1) / (2 * d12);
+                if (frac > 1) frac = 1; else if (frac < 0) frac = 0;
+                w[i2] = frac * W; w[j2] = (1 - frac) * W;
+              }
+            }
+          }
+          if (fixedIdx !== -1) {
+            let fPos = indices.indexOf(fixedIdx);
+            if (fPos !== -1) {
+              let w_f = w[fPos];
+              if (oracleFixedRangemode === 2 && (w_f < fixedMin - 1e-4 || w_f > fixedMax + 1e-4)) return { dist: Infinity, weights: Array.from(w) };
+              if (oracleFixedRangemode === 1 && (w_f < fixedMin || w_f > fixedMax)) {
+                let bound = w_f < fixedMin ? fixedMin : fixedMax;
+                w[fPos] = bound;
+                let sumOthers = 0;
+                for (let k = 0; k < N; k++) if (k !== fPos) sumOthers += w[k];
+                if (sumOthers > 0) { for (let k = 0; k < N; k++) if (k !== fPos) w[k] = (w[k] / sumOthers) * (1 - bound); }
+                else { for (let k = 0; k < N; k++) if (k !== fPos) w[k] = (1 - bound) / (N - 1); }
+                for (let iter2 = 0; iter2 < 3; iter2++) {
+                  for (let i2 = 0; i2 < N - 1; i2++) {
+                    if (i2 === fPos) continue;
+                    for (let j2 = i2 + 1; j2 < N; j2++) {
+                      if (j2 === fPos) continue;
+                      let i = indices[i2], j = indices[j2];
+                      let W = w[i2] + w[j2];
+                      if (W < 1e-7) continue;
+                      let d1_ = 0, d2_ = 0, rowI_ = i * dimensions, rowJ_ = j * dimensions;
+                      let d12_ = 0;
+                      for (let c = 0; c < dimensions; c++) { let diff = S[rowI_ + c] - S[rowJ_ + c]; d12_ += (_W ? _W[c] : 1) * diff * diff; }
+                      for (let c = 0; c < dimensions; c++) {
+                        let S_rem = 0;
+                        for (let k2 = 0; k2 < N; k2++) if (k2 !== i2 && k2 !== j2) S_rem += w[k2] * S[indices[k2] * dimensions + c];
+                        let T_mod = (target[c] - S_rem) / W;
+                        let diff1 = T_mod - S[rowI_ + c]; d1_ += (_W ? _W[c] : 1) * diff1 * diff1;
+                        let diff2 = T_mod - S[rowJ_ + c]; d2_ += (_W ? _W[c] : 1) * diff2 * diff2;
+                      }
+                      let frac = d12_ === 0 ? 0.5 : (d12_ + d2_ - d1_) / (2 * d12_);
+                      if (frac > 1) frac = 1; else if (frac < 0) frac = 0;
+                      w[i2] = frac * W; w[j2] = (1 - frac) * W;
+                    }
+                  }
+                }
+              }
+            }
+          }
+          let d = 0;
+          for (let c = 0; c < dimensions; c++) {
+            let sum = 0;
+            for (let k2 = 0; k2 < N; k2++) sum += w[k2] * S[indices[k2] * dimensions + c];
+            let diff = target[c] - sum; d += (_W ? _W[c] : 1) * diff * diff;
+          }
+          return { dist: Math.sqrt(Math.max(0, d)), weights: Array.from(w) };
+        }
+      };
+
+      let formatName = function (indices, weights) {
+        let map = {};
+        for (let i2 = 0; i2 < indices.length; i2++) {
+          let pop = sourceArray[indices[i2]][0];
+          map[pop] = (map[pop] || 0) + weights[i2] * 100;
+        }
+        let parts = Object.keys(map).map(pop => ({ pop: pop, w: map[pop] }));
+        parts.sort((a, b) => b.w - a.w);
+        let strArray = parts.filter(p => p.w >= 0.05).map(p => p.w.toFixed(1) + "% " + p.pop);
+        return strArray.length ? strArray.join(" + ") : parts[0].pop;
+      };
+
+      let beams = [], beamSize = Math.max(25, Math.min(250, Math.floor(500000 / sourceNum)));
+      if (oracleIterationMode) beamSize = Math.max(beamSize, 2500);
+
+      if (fixedIdx !== -1) {
+        beams.push({ indices: [fixedIdx], dist: Math.sqrt(dT[fixedIdx]), w: [1] });
+      } else {
+        for (let i = 0; i < sourceNum; i++) {
+          if (excludeSrc[i]) continue;
+          beams.push({ indices: [i], dist: Math.sqrt(dT[i]), w: [1] });
+        }
+        beams.sort((a, b) => a.dist - b.dist);
+        if (beams.length > beamSize) beams.length = beamSize;
+      }
+
+      for (let m = 0; m <= oracleMode; m++) {
+        let nextBeams = [];
+        let seen = new Set();
+        let cutoff = Infinity;
+
+        if (m === 0) {
+          for (let b of beams) {
+            if (b.dist < cutoff || nextBeams.length < beamSize) {
+              nextBeams.push({ indices: [...b.indices], dist: b.dist, w: [...b.w] });
+              let k = nextBeams.length - 1;
+              while (k > 0 && nextBeams[k - 1].dist > nextBeams[k].dist) {
+                let temp = nextBeams[k]; nextBeams[k] = nextBeams[k - 1]; nextBeams[k - 1] = temp;
+                k--;
+              }
+              if (nextBeams.length > beamSize) nextBeams.pop();
+              if (nextBeams.length === beamSize) cutoff = nextBeams[beamSize - 1].dist;
+            }
+          }
+
+          let beamIndices = beams.map(b => b.indices[0]).sort((a, b) => a - b);
+          let inBeam = new Int32Array(sourceNum).fill(-1);
+          for (let idx = 0; idx < beamIndices.length; idx++) inBeam[beamIndices[idx]] = idx;
+
+          for (let idx = 0; idx < beamIndices.length; idx++) {
+            let i = beamIndices[idx];
+            let rowI = i * dimensions;
+            for (let j = 0; j < sourceNum; j++) {
+              if (i === j) continue;
+              if (excludeSrc[j]) continue;
+              let jIdx = inBeam[j];
+              if (jIdx !== -1 && jIdx < idx) continue;
+
+              let d1 = dT[i], d2 = dT[j];
+              let d12 = 0, rowJ = j * dimensions;
+              for (let c = 0; c < dimensions; c++) { let diff = S[rowI + c] - S[rowJ + c]; d12 += (_W ? _W[c] : 1) * diff * diff; }
+              let frac = d12 === 0 ? 0.5 : (d12 + d2 - d1) / (2 * d12);
+              if (frac > 1) frac = 1; else if (frac < 0) frac = 0;
+              let dSq = d2 - frac * frac * d12;
+              let w_i = frac, w_j = 1 - frac;
+
+              if (fixedIdx !== -1) {
+                let fPos = (i === fixedIdx) ? 0 : (j === fixedIdx ? 1 : -1);
+                if (fPos !== -1) {
+                  let w_f = fPos === 0 ? w_i : w_j;
+                  if (oracleFixedRangemode === 2 && (w_f < fixedMin - 1e-4 || w_f > fixedMax + 1e-4)) continue;
+                  if (oracleFixedRangemode === 1 && (w_f < fixedMin || w_f > fixedMax)) {
+                    w_f = w_f < fixedMin ? fixedMin : fixedMax;
+                    w_i = fPos === 0 ? w_f : 1 - w_f;
+                    w_j = 1 - w_i;
+                    dSq = 0;
+                    for (let c = 0; c < dimensions; c++) { let diff = target[c] - (w_i * S[rowI + c] + w_j * S[rowJ + c]); dSq += (_W ? _W[c] : 1) * diff * diff; }
+                  }
+                }
+              }
+
+              if (dSq < 0) dSq = 0;
+              let dist = Math.sqrt(dSq);
+
+              if (dist < cutoff || nextBeams.length < beamSize) {
+                let minIdx = i < j ? i : j;
+                let maxIdx = i > j ? i : j;
+                nextBeams.push({ indices: [minIdx, maxIdx], dist: dist, w: [minIdx === i ? w_i : w_j, minIdx === i ? w_j : w_i] });
+                let k = nextBeams.length - 1;
+                while (k > 0 && nextBeams[k - 1].dist > nextBeams[k].dist) {
+                  let temp = nextBeams[k]; nextBeams[k] = nextBeams[k - 1]; nextBeams[k - 1] = temp;
+                  k--;
+                }
+                if (nextBeams.length > beamSize) nextBeams.pop();
+                if (nextBeams.length === beamSize) cutoff = nextBeams[beamSize - 1].dist;
+              }
+            }
+          }
+        } else {
+          for (let b of beams) {
+            for (let l = 0; l < sourceNum; l++) {
+              if (excludeSrc[l]) continue;
+              let arr = [...b.indices, l].sort((x, y) => x - y);
+              let hash = arr.join(",");
+              if (!seen.has(hash)) {
+                seen.add(hash);
+                let res = getAdmix(arr);
+                if (res.dist < cutoff || nextBeams.length < beamSize) {
+                  nextBeams.push({ indices: arr, dist: res.dist, w: res.weights });
+                  let k = nextBeams.length - 1;
+                  while (k > 0 && nextBeams[k - 1].dist > nextBeams[k].dist) {
+                    let temp = nextBeams[k]; nextBeams[k] = nextBeams[k - 1]; nextBeams[k - 1] = temp;
+                    k--;
+                  }
+                  if (nextBeams.length > beamSize) nextBeams.pop();
+                  cutoff = nextBeams[nextBeams.length - 1].dist;
+                }
+              }
+            }
+          }
+        }
+        beams = nextBeams;
+      }
+
+      let distances = [];
+      let nameSet = new Set();
+
+      if (oracleIterationMode) {
+        let eliminated = new Int8Array(sourceNum);
+        for (let b of beams) {
+          let skip = false;
+          for (let idx of b.indices) {
+            if (eliminated[idx]) { skip = true; break; }
+          }
+          if (skip) continue;
+
+          let name = formatName(b.indices, b.w);
+          if (name === targetArray[targetId][0] || nameSet.has(name)) continue;
+
+          nameSet.add(name);
+          distances.push([name, b.dist]);
+
+          let maxW = -1;
+          let maxIdx = -1;
+          for (let k = 0; k < b.indices.length; k++) {
+            if (b.w[k] > maxW) {
+              maxW = b.w[k];
+              maxIdx = b.indices[k];
+            }
+          }
+          if (maxIdx !== -1) eliminated[maxIdx] = 1;
+
+          if (distances.length >= distMaxOut) break;
+        }
+      } else {
+        for (let b of beams) {
+          let name = formatName(b.indices, b.w);
+          if (!nameSet.has(name) && name !== targetArray[targetId][0]) {
+            nameSet.add(name); distances.push([name, b.dist]);
+          }
+        }
+      }
+
+      let resultsNum = distances.length;
+      if (resultsNum < distMaxOut) distMaxOut = resultsNum;
+
+      let gradStyle1 = "", gradStyle2 = "", gradHSL = "";
+      if (oracleAddGradient) { gradStyle1 = ' style="color:black;background-color:hsl('; gradStyle2 = ', 70%, 48%)"'; }
+
+      let modeTitle = (oracleMode === 0) ? "2-way" : (oracleMode === 1) ? "3-way" : "4-way";
+      output += '<table class="distances"><tr><th>Distance&nbsp;to (' + modeTitle + '):</th><th>' + targetArray[targetId][0] + "</th>";
+      for (let i = 0; i < distMaxOut; i++) {
+        if (i >= distances.length) break;
+        let distanceCurrent = distances[i][1];
+        if (oracleAddGradient) {
+          if (distanceCurrent < gradFrom) gradHSL = 120;
+          else if (distanceCurrent > gradTo) gradHSL = 0;
+          else gradHSL = 120 - (((distanceCurrent - gradFrom) / (gradTo - gradFrom)) * 120);
+        }
+        output += "<tr><td" + gradStyle1 + gradHSL + gradStyle2 + ">" + distanceCurrent.toFixed(8) + "</td><td>" + distances[i][0] + "</td></tr>";
+      }
+      output += "</table>";
+      printOutput(output, "oracleoutput");
+    }
+
+    function prepareTarget(targetId, slots) {
+      let i;
+      const target = targetArray[targetId].slice();
+      target.shift();
+      for (i = 0; i < dimensions; i++) {
+        target[i] = target[i] / slots;
+      }
+      return target;
+    }
+
+    function prepareSource(slots) {
+      let i, j, tempLine;
+      const source = Array(sourceNum);
+      for (i = 0; i < sourceNum; i++) {
+        tempLine = sourceArray[i].slice();
+        tempLine.shift();
+        source[i] = tempLine.slice();
+        for (j = 0; j < dimensions; j++) {
+          source[i][j] = source[i][j] / slots;
+        }
+      }
+      return source;
+    }
+
+    function nPops(target, source, targetId, slots, cyclesMultiplier, distColMultiplier, recalculate, nPop) {
+      let namesArr = [], idArr = [], initSet = [], initResult, initResultsTable = [], counter = 0, sloths = slots,
+        initSourceNum, popNum, currentSet = [], currentResult, nextSet, nextResult, newSource = [], newNamesArr = [];
+
+      function aggregateArray(arr) {
+        let sortedArr = arr.slice(), aggregatedArr = [];
+        sortedArr.sort(function (a, b) {
+          return a[0].localeCompare(b[0]);
+        });
+        for (let name = null, i = 0, j = -1, n = sortedArr.length; i < n; i++) {
+          if (sortedArr[i][0] != name) {
+            j++;
+            name = sortedArr[i][0];
+            aggregatedArr.push([]);
+          }
+          aggregatedArr[j].push(sortedArr[i]);
+        }
+        return aggregatedArr;
+      }
+
+      function runFMC(setToRun) {
+        counter++;
+        let currentSource = [];
+        for (item of setToRun) {
+          currentSource = currentSource.concat(source[item]);
+        }
+        return fastMonteCarlo(target, currentSource, targetId, slots, cyclesMultiplier, distColMultiplier, recalculate, currentSource.length);
+      }
+
+      function runFMCadc(setToRun, slots, adc, adcmltp, cmltp) {
+        let currentSource = [];
+        for (item of setToRun) {
+          currentSource = currentSource.concat(source[item]);
+        }
+        return fastMonteCarlo(target, currentSource, targetId, slots, cmltp, adcmltp, adc, currentSource.length);
+      }
+
+      function getNames(setToRun) {
+        let names = [];
+        for (item of setToRun) {
+          names = names.concat(namesArr[item]);
+        }
+        return names;
+      }
+
+      function newPop(currentSetItem) {
+        let newPop = randomFromRange(0, popNum);
+        while (newPop == currentSetItem || currentSet.includes(newPop)) {
+          newPop = randomFromRange(0, popNum);
+        }
+        return newPop;
+      }
+
+      for (let i = 0, tempArr; i < sourceNum; i++) {
+        tempArr = [sourceArray[i][0].split(':').shift(), sourceArray[i][0]];
+        source[i] = tempArr.concat(source[i]);
+      }
+      source = aggregateArray(source);
+      for (let item in source) {
+        namesArr.push([]);
+        for (let item2 in source[item]) {
+          source[item][item2].shift();
+          namesArr[item].push(source[item][item2].shift());
+          idArr.push(item);
+        }
+      }
+      popNum = source.length;
+      for (let i = 0; i < popNum; i++) {
+        initSet.push(i);
+      }
+      let slotNum = 50, cyclesNum = 5;
+      initResult = [
+        runFMCadc(initSet, slotNum, true, 0.5, cyclesNum),
+        runFMCadc(initSet, slotNum, false, 0, cyclesNum),
+        runFMCadc(initSet, slotNum, true, 1, cyclesNum),
+        runFMCadc(initSet, slotNum, false, 0, cyclesNum),
+        runFMCadc(initSet, slotNum, true, 2, cyclesNum),
+        runFMCadc(initSet, 500, false, 0, 2)
+      ];
+      for (let item in idArr) {
+        for (let item2 in initResult) {
+          initResultsTable.push([idArr[item], initResult[item2].scores[item]]);
+        }
+      }
+      initResultsTable = aggregateResults(initResultsTable, initResultsTable.length);
+      initResultsTable.sort(function (a, b) {
+        return b[1] - a[1];
+      });
+      for (let item in initResultsTable) {
+        if (Number(initResultsTable[item][1]) > 0.02) {
+          newSource.push(source[Number(initResultsTable[item][0])]);
+          newNamesArr.push(namesArr[Number(initResultsTable[item][0])]);
+        } else {
+          break;
+        }
+      }
+      source = newSource;
+      namesArr = newNamesArr;
+      popNum = source.length;
+      if (popNum <= nPop) {
+        for (let i = 0; i < popNum; i++) {
+          currentSet.push(i);
+        }
+        return finishIt();
+      } else {
+        for (let i = 0; i < nPop; i++) {
+          currentSet.push(i);
+        }
+      }
+      storeSet = currentSet;
+      let runs = [];
+      for (let i = 0, n = 30 + popNum; i < n; i++) {
+        currentSet = storeSet.slice();
+        currentResult = runFMC(currentSet);
+        slots = 35;
+        for (let i = 0, n = Math.ceil(popNum); i < n; i++) {
+          for (let j = 0; j < nPop; j++) {
+            nextSet = currentSet.slice();
+            nextSet[j] = newPop(nextSet[j]);
+            nextResult = runFMC(nextSet);
+            if (nextResult.distance < currentResult.distance) {
+              currentResult = nextResult;
+              currentSet = nextSet;
+            }
+          }
+        }
+        runs.push([currentResult.distance, currentSet.slice()]);
+      }
+      runs.sort(function (a, b) {
+        return a[0] - b[0];
+      });
+      currentSet = runs[0][1];
+
+      function finishIt() {
+        slots = sloths;
+        currentResult = runFMC(currentSet);
+        currentResult.names = getNames(currentSet);
+        currentResult.pops = popNum;
+        currentResult.iter = counter;
+        return currentResult;
+      }
+      return finishIt();
+    }
+
+    function fastMonteCarlo(target, source, targetId, slots, cyclesMultiplier, distColMultiplier, recalculate, sourceNum) {
+      let i, j, tempLine, currentSlots, currentPoint, currentDistance, nextSlots, ranking = Array(),
+        nextPoint, nextDistance, previousDistance, rankingNum, dimNum = dimensions;
+      const cycles = Math.ceil(sourceNum * cyclesMultiplier / 4), scores = Array(sourceNum).fill(0),
+        result = { target: targetId, distance, scores },
+        bigNumber = 100000000000000000;
+      if (distColMultiplier) {
+        distColMultiplier /= 8;
+        dimNum++;
+        for (i = 0; i < sourceNum; i++) {
+          source[i] = subArray(source[i], target);
+          source[i].push(distColMultiplier * Math.sqrt(distance(source[i])));
+        }
+      }
+      else {
+        for (i = 0; i < sourceNum; i++) {
+          source[i] = subArray(source[i], target);
+        }
+      }
+
+      function randomizedSlots(oldSlots) {
+        let i, newSlots = Array(slots);
+        for (i = 0; i < slots; i++) {
+          newSlots[i] = randomFromRange(0, sourceNum);
+          while (newSlots[i] == oldSlots[i]) {
+            newSlots[i] = randomFromRange(0, sourceNum);
+          }
+        }
+        return newSlots;
+      }
+
+      function buildPoint(fromSlots) {
+        let i, tempLine, newPoint = Array(dimNum).fill(0);
+        for (i = 0; i < slots; i++) {
+          tempLine = source[fromSlots[i]].slice();
+          newPoint = addArray(newPoint, tempLine);
+        }
+        return newPoint;
+      }
+
+      function distance(fromPoint) {
+        return weightedSumSq(fromPoint);
+      }
+
+      if (sourceNum == 1) {
+        currentSlots = Array(slots).fill(0);
+        currentPoint = buildPoint(currentSlots);
+        currentDistance = distance(currentPoint);
+        scores[0] = 1;
+        result.distance = Number(Math.sqrt(currentDistance).toFixed(8));
+        result.scores = scores;
+        return result;
+      }
+      currentSlots = Array(slots).fill(-1);
+      currentSlots = randomizedSlots(currentSlots);
+      currentPoint = buildPoint(currentSlots);
+      currentDistance = distance(currentPoint);
+      for (i = 0; i < cycles; i++) {
+        nextSlots = randomizedSlots(currentSlots);
+        for (j = 0; j < slots; j++) {
+          nextPoint = subArray(currentPoint, source[currentSlots[j]]);
+          nextPoint = addArray(nextPoint, source[nextSlots[j]]);
+          nextDistance = distance(nextPoint);
+          if (nextDistance < currentDistance) {
+            currentSlots[j] = nextSlots[j];
+            currentPoint = nextPoint;
+            currentDistance = nextDistance;
+          }
+        }
+      }
+      for (i = 0; i < slots; i++) {
+        scores[currentSlots[i]] += 1;
+      }
+      for (i = 0; i < sourceNum; i++) {
+        if (scores[i] > 0) {
+          ranking.push([i, scores[i]]);
+        }
+      }
+      ranking.sort(function (a, b) {
+        return b[1] - a[1];
+      });
+      rankingNum = ranking.length;
+      function secondStage() {
+        currentDistance = Math.round(bigNumber * currentDistance);
+        do {
+          previousDistance = currentDistance;
+          for (i = rankingNum - 1; i > -1; i--) {
+            if (ranking[i][1] > 0) {
+              for (j = 0; j < rankingNum; j++) {
+                if (i == j) { continue; }
+                nextPoint = subArray(currentPoint, source[ranking[i][0]]);
+                nextPoint = addArray(nextPoint, source[ranking[j][0]]);
+                nextDistance = Math.round(bigNumber * distance(nextPoint));
+                if (nextDistance < currentDistance) {
+                  ranking[i][1]--;
+                  ranking[j][1]++;
+                  currentPoint = nextPoint;
+                  currentDistance = nextDistance;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        while (currentDistance < previousDistance);
+      }
+      secondStage();
+      for (i = 0; i < rankingNum; i++) {
+        scores[ranking[i][0]] = ranking[i][1];
+      }
+      if (distColMultiplier && recalculate) {
+        dimNum--;
+        currentPoint.pop();
+        currentDistance = distance(currentPoint);
+        for (i = 0; i < sourceNum; i++) {
+          source[i].pop();
+        }
+        ranking = [];
+        for (i = 0; i < sourceNum; i++) {
+          if (scores[i] > 0) {
+            ranking.push([i, scores[i]]);
+          }
+        }
+        ranking.sort(function (a, b) {
+          return b[1] - a[1];
+        });
+        rankingNum = ranking.length;
+        secondStage();
+        for (i = 0; i < rankingNum; i++) {
+          scores[ranking[i][0]] = ranking[i][1];
+        }
+      }
+
+      for (i = 0; i < sourceNum; i++) {
+        scores[i] = scores[i] / slots;
+      }
+      if (distColMultiplier && !recalculate) { currentPoint.pop(); }
+      currentDistance = distance(currentPoint);
+      result.distance = Number(Math.sqrt(currentDistance).toFixed(8));
+      result.scores = scores;
+      return result;
+    }
+
+    function multiFMC() {
+      let i, j, source, target, slots, resultsTable = Array(sourceNum),
+        sourceNumLocal = sourceNum, outputMsg, tempLine, accumulatedResult,
+        currentResult, longestSourceName = 0, averageDistance = 0,
+        minDistance, maxDistance, currentDistance, names = "",
+        namesDiv, namesCompStyle, namesOffset;
+      const results = Array(targetNum),
+        addDC = (addDistColMulti == 1 ? false : addDistColMulti);
+      slots = (fastModeMulti ? 125 : 500);
+      for (i = 0; i < targetNum; i++) {
+        source = prepareSource(slots);
+        target = prepareTarget(i, slots);
+        results[i] = fastMonteCarlo(target, source, i, slots, cyclesXMulti, addDC, addDistColMultiRecal, sourceNum);
+      }
+      for (i = 0; i < sourceNum; i++) {
+        resultsTable[i] = Array(targetNum + 1);
+        resultsTable[i][0] = sourceArray[i][0];
+        for (j = 0; j < targetNum; j++) {
+          resultsTable[i][j + 1] = results[j].scores[i];
+        }
+      }
+      if (aggregateMulti) {
+        resultsTable = aggregateResults(resultsTable, sourceNumLocal);
+        sourceNumLocal = resultsTable.length;
+      }
+
+      function returnHSL(currentResult) {
+        if (currentResult == 0) {
+          return '#444455';
+        } else {
+          return 'hsl(' + (225 - 35 * currentResult) + ', ' + (25 + 70 * currentResult) + '%, ' + (45 * currentResult + 35) + '%)';
+        }
+      }
+
+      function returnDistChart(currentDistance, maxDistance, minDistance, averageDistance) {
+        let averageDistancePct, currentDistancePct;
+        if (maxDistance == minDistance) {
+          maxDistance = 1;
+          minDistance = 0;
+          averageDistance = 0.5;
+          currentDistance = 0.5;
+        }
+        function getDistancePct(distance) {
+          return ((distance - minDistance) / (maxDistance - minDistance)) * 80;
+        }
+        averageDistancePct = getDistancePct(averageDistance);
+        currentDistancePct = getDistancePct(currentDistance);
+        return '<td class="nonselectable multidistchart" style="background-image: linear-gradient(90deg, #777 ' + (averageDistancePct + 3) + '%, #999 ' + (averageDistancePct + 3) + '%, #999 ' + (averageDistancePct + 7) + '%, #777 ' + (averageDistancePct + 7) + '%);"><div style="padding-left: ' + (((currentDistancePct + 5) * 6 / 100) - 0.3) + 'em">&#8226;</div></td>';
+      }
+
+      accumulatedResult = Array(sourceNumLocal).fill(0);
+      minDistance = results[0].distance;
+      maxDistance = results[0].distance;
+      for (i = 0; i < targetNum; i++) {
+        currentDistance = results[i].distance;
+        averageDistance += currentDistance;
+        if (currentDistance > maxDistance) {
+          maxDistance = currentDistance;
+        }
+        if (currentDistance < minDistance) {
+          minDistance = currentDistance;
+        }
+        for (j = 0; j < sourceNumLocal; j++) {
+          accumulatedResult[j] += resultsTable[j][i + 1];
+        }
+      }
+      averageDistance = (averageDistance / targetNum).toFixed(8);
+      if (!printZeroesMulti) {
+        for (i = sourceNumLocal - 1; i > -1; i--) {
+          if (accumulatedResult[i] == 0) {
+            resultsTable.splice(i, 1);
+            accumulatedResult.splice(i, 1);
+          }
+        }
+        sourceNumLocal = resultsTable.length;
+      }
+      for (i = 0; i < sourceNumLocal; i++) {
+        names += resultsTable[i][0] + "<br>";
+      }
+      namesDiv = document.createElement("div");
+      namesDiv.innerHTML = names;
+      namesDiv.style.cssText = "font-size: 0.7em; width: auto; overflow: hidden; max-height: 1em; min-height: 1em; position: absolute; left: -999em; top: -999em; display: table-cell";
+      document.body.appendChild(namesDiv);
+      namesCompStyle = window.getComputedStyle(namesDiv);
+      namesOffset = Number((namesCompStyle.getPropertyValue("width")).replace(/px/, "")) / Number((namesCompStyle.getPropertyValue("height")).replace(/px/, "")) / 1.4142 + 2;
+      document.body.removeChild(namesDiv);
+      outputMsg = '<div class="multitablewrapper"><table><tr style="height:' + namesOffset + 'em"><td data-columnid="0" class="multiheader"><div><span onclick="sortByColumn(this, false)">Target</span></div></td><td data-columnid="1" class="multiheader" colspan="2"><div><span onclick="sortByColumn(this)">Distance' + (addDistColMulti == 1 ? "" : " | ADC: " + addDistColMulti / 8 + "x" + (addDistColMultiRecal ? " RC" : "")) + '</span></div></td>';
+      for (i = 0; i < sourceNumLocal; i++) {
+        outputMsg += '<td data-columnid="' + (i + 2) + '" class="multisources"><div><span onclick="sortByColumn(this)">' + resultsTable[i][0] + '</span></div></td>';
+      }
+      outputMsg += '</tr>';
+      for (i = 0; i < targetNum; i++) {
+        currentDistance = results[i].distance;
+        outputMsg += '<tr data-rowid="' + i + '"><td onclick="sortByRow(this)" data-columnid="0" class="multitargets">' + targetArray[i][0] + '</td><td data-columnid="1" class="multidistance">' + currentDistance.toFixed(8) + '</td>' + returnDistChart(currentDistance, maxDistance, minDistance, averageDistance);
+        for (j = 0; j < sourceNumLocal; j++) {
+          currentResult = resultsTable[j][i + 1];
+          outputMsg += '<td data-columnid="' + (j + 2) + '" class="multiresult" style="background-color:' + returnHSL(currentResult) + '">' + (100 * currentResult).toFixed(1) + '</td>';
+        }
+        outputMsg += '</tr>';
+      }
+      outputMsg += '<tr><td onclick="sortByRow(this, true)" data-columnid="0" class="multitargets">Average</td><td data-columnid="1" class="multidistance">' + averageDistance + '</td>' + returnDistChart(averageDistance, maxDistance, minDistance, averageDistance);
+      for (i = 0; i < sourceNumLocal; i++) {
+        currentResult = accumulatedResult[i] / targetNum;
+        outputMsg += '<td data-columnid="' + (i + 2) + '" data-average="' + currentResult + '" class="multiresult" style="background-color:' + returnHSL(currentResult) + '">' + (100 * currentResult).toFixed(1) + '</td>';
+      }
+      outputMsg += '</tr>';
+      outputMsg += '</table><button onclick="resetSorting(this)" class="buttons buttonmulti">reset&nbsp;sorting</button><button onclick= "copyTable(this)" class="buttons buttonmulti">copy&nbsp;table&nbsp;as&nbsp;CSV</button><button onclick= "copyTable(this, true)" class="buttons buttonmulti">copy&nbsp;table&nbsp;as&nbsp;TSV</button></div>';
+      printOutput(outputMsg, "multioutput");
+    }
+
+    function aggregateResults(resultsTable, sourceNumLocal) {
+      let i, popName, storedName;
+      for (i = 0; i < sourceNumLocal; i++) {
+        popName = resultsTable[i][0].split(":");
+        resultsTable[i][0] = popName[0];
+      }
+      resultsTable.sort(function (a, b) {
+        return a[0].localeCompare(b[0]);
+      });
+      for (i = sourceNumLocal - 2; i > -1; i--) {
+        if (resultsTable[i][0] == resultsTable[i + 1][0]) {
+          storedName = resultsTable[i][0];
+          resultsTable[i] = addArray(resultsTable[i], resultsTable[i + 1]);
+          resultsTable[i][0] = storedName;
+          resultsTable.splice(i + 1, 1);
+        }
+      }
+      return resultsTable;
+    }
+
+    function sortByRow(elmnt, average = false) {
+      let i, j, rowLen, rowNum, ranking, cell;
+      const table = elmnt.parentNode.parentNode,
+        row = elmnt.parentNode.cells;
+      rowLen = row.length;
+      ranking = Array(rowLen).fill([]);
+      if (average) {
+        for (i = 0; i < rowLen; i++) {
+          ranking[i] = ranking[i].concat([row[i].dataset.columnid]);
+          ranking[i].push(Number(row[i].dataset.average));
+        }
+      } else {
+        for (i = 0; i < rowLen; i++) {
+          ranking[i] = ranking[i].concat([row[i].dataset.columnid]);
+          ranking[i].push(Number(row[i].innerHTML));
+        }
+      }
+      ranking.splice(0, 3);
+      ranking = sortByNum(ranking);
+      rowNum = table.rows.length;
+      rowLen = ranking.length;
+      for (i = 0; i < rowNum; i++) {
+        for (j = 0; j < rowLen; j++) {
+          cell = table.rows[i].querySelector('[data-columnid="' + ranking[j][0] + '"]');
+          cell.parentNode.appendChild(cell);
+        }
+      }
+    }
+
+    function sortByColumn(elmnt, byNumber = true) {
+      let i, column, columnLen, ranking, row;
+      elmnt = elmnt.parentNode.parentNode;
+      const table = elmnt.parentNode.parentNode,
+        columnid = elmnt.dataset.columnid;
+      column = table.querySelectorAll('[data-columnid="' + columnid + '"]');
+      columnLen = column.length;
+      ranking = Array(columnLen).fill([]);
+      for (i = 1; i < columnLen; i++) {
+        ranking[i] = ranking[i].concat([column[i].parentNode.dataset.rowid]);
+        ranking[i].push((byNumber ? Number(column[i].innerHTML) : column[i].innerHTML));
+      }
+      ranking.shift();
+      ranking.pop();
+      columnLen -= 2;
+
+      function sortByText(arr) {
+        const storeArr = arr.toString();
+        arr.sort(function (a, b) {
+          return a[1].localeCompare(b[1]);
+        });
+        if (storeArr == arr.toString()) {
+          arr.sort(function (a, b) {
+            return b[1].localeCompare(a[1]);
+          });
+        }
+        return arr;
+      }
+
+      ranking = (byNumber ? sortByNum(ranking, (columnid == 1 ? false : true)) : sortByText(ranking));
+      for (i = 0; i < columnLen; i++) {
+        row = table.querySelector('[data-rowid="' + ranking[i][0] + '"]');
+        table.appendChild(row);
+      }
+      row = table.rows[1];
+      table.appendChild(row);
+    }
+
+    function sortByNum(arr, desc = true) {
+      const storeArr = arr.toString();
+      function sortDesc(arr) {
+        arr.sort(function (a, b) {
+          return b[1] - a[1];
+        });
+        return arr;
+      }
+      function sortAsc(arr) {
+        arr.sort(function (a, b) {
+          return a[1] - b[1];
+        });
+        return arr;
+      }
+      arr = (desc ? sortDesc(arr) : sortAsc(arr));
+      if (storeArr == arr.toString()) {
+        arr = (desc ? sortAsc(arr) : sortDesc(arr));
+      }
+      return arr;
+    }
+
+    function resetSorting(elmnt) {
+      let i, j, n, table, rowLen, row, columnLen, cell;
+      table = elmnt.parentNode.querySelector("tr").parentNode;
+      rowLen = table.rows.length;
+      for (i = 0, n = rowLen - 2; i < n; i++) {
+        row = table.querySelector('[data-rowid="' + i + '"]');
+        table.appendChild(row);
+      }
+      row = table.rows[1];
+      table.appendChild(row);
+      columnLen = table.rows[0].cells.length;
+      for (i = 0; i < rowLen; i++) {
+        for (j = 2; j < columnLen; j++) {
+          cell = table.rows[i].querySelector('[data-columnid="' + j + '"]');
+          cell.parentNode.appendChild(cell);
+        }
+      }
+    }
+
+    function copyTable(elmnt, TSV = false) {
+      let tableText;
+      const textarea = document.createElement("textarea");
+      tableText = elmnt.parentNode.querySelector("tr").parentNode.innerHTML;
+      tableText = tableText.replace(/<\/td>/g, ",").replace(/<\/tr>/g, "\n")
+        .replace(/<([^>]+)>/g, "").replace(/&#8226;,/g, "").replace(/•,/g, "")
+        .replace(/,\n/g, "\n");
+      if (TSV) {
+        tableText = tableText.replace(/,/g, "\t");
+      }
+      textarea.value = tableText;
+      textarea.setAttribute("readonly", "");
+      textarea.style.cssText = "position: absolute; top: -999em; left: -999em";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+
+    
+    function buildPieSvg(resultsTable, size) {
+      size = size || 200;
+      const cx = size / 2, cy = size / 2, r = size * 0.42;
+      const colors = [
+        "#4fb8a6","#5b8def","#f0a04b","#c8564b","#9b7bff","#e06bb0",
+        "#6bcb77","#f7d060","#4d96ff","#ff6b6b","#20c997","#fcc419",
+        "#748ffc","#ff922b","#51cf66","#cc5de8"
+      ];
+      let total = 0;
+      const slices = [];
+      for (let i = 0; i < resultsTable.length; i++) {
+        const v = resultsTable[i][1];
+        if (v > 0.0005) { slices.push({ name: resultsTable[i][0], v: v }); total += v; }
+      }
+      if (total <= 0 || !slices.length) return "";
+      // normalize
+      let acc = 0;
+      let paths = "";
+      let legend = "";
+      const legendItems = [];
+      for (let i = 0; i < slices.length; i++) {
+        const frac = slices[i].v / total;
+        const start = acc * 2 * Math.PI - Math.PI / 2;
+        acc += frac;
+        const end = acc * 2 * Math.PI - Math.PI / 2;
+        const x1 = cx + r * Math.cos(start), y1 = cy + r * Math.sin(start);
+        const x2 = cx + r * Math.cos(end), y2 = cy + r * Math.sin(end);
+        const large = frac > 0.5 ? 1 : 0;
+        const col = colors[i % colors.length];
+        if (frac >= 0.999) {
+          paths += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${col}"/>`;
+        } else {
+          paths += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z" fill="${col}"/>`;
+        }
+        legendItems.push({ name: slices[i].name, pct: (frac * 100).toFixed(1), col });
+      }
+      let legHtml = '<div class="pie-legend">';
+      for (const it of legendItems) {
+        legHtml += `<div class="pie-leg-row"><span class="pie-swatch" style="background:${it.col}"></span><span class="pie-leg-pct">${it.pct}%</span><span class="pie-leg-name">${it.name}</span></div>`;
+      }
+      legHtml += '</div>';
+      return `<div class="pie-wrap"><svg class="pie-svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${paths}</svg>${legHtml}</div>`;
+    }
+
+
+    function singleFMC(targetId) {
+      let i, outputMsg, currentResult, sourceNumLocal = sourceNum,
+        resultsTable, time = Date.now(), result;
+      const slots = 500,
+        target = prepareTarget(targetId, slots),
+        source = prepareSource(slots),
+        addDC = (addDistCol == 1 ? false : addDistCol);
+      if (nPop == 0) {
+        result = fastMonteCarlo(target, source, targetId, slots, cyclesX, addDC, addDistColRecal, sourceNum);
+        resultsTable = Array(sourceNumLocal)
+        for (i = 0; i < sourceNumLocal; i++) {
+          resultsTable[i] = Array(2);
+          resultsTable[i][0] = sourceArray[i][0];
+          resultsTable[i][1] = result.scores[i];
+        }
+      } else {
+        result = nPops(target, source, targetId, slots, cyclesX, addDC, addDistColRecal, nPop);
+        sourceNumLocal = result.scores.length;
+        resultsTable = Array(sourceNumLocal);
+        for (i = 0; i < sourceNumLocal; i++) {
+          resultsTable[i] = Array(2);
+          resultsTable[i][0] = result.names[i];
+          resultsTable[i][1] = result.scores[i];
+        }
+      }
+      if (aggregate) {
+        resultsTable = aggregateResults(resultsTable, sourceNumLocal);
+      }
+      resultsTable.sort(function (a, b) {
+        return b[1] - a[1];
+      });
+      time = Date.now() - time;
+      outputMsg = "<table><tr><th colspan='" + (addBarChart == 2 ? 3 : 2) + "' class='singleheader'>Target: " + targetArray[targetId][0] + "<br/>";
+      outputMsg += "Distance: " + (100 * result.distance).toFixed(4) + "% / " + result.distance.toFixed(8) + (nPop == 0 ? "" : " | R" + nPop + "P") + (addDistCol == 1 ? "" : " | ADC: " + addDistCol / 8 + "x" + (addDistColRecal ? " RC" : "")) + "<br/>";
+      outputMsg += '<div class="singleinfo nonselectable" data-nonselectable="' + (nPop == 0 ? 'Sources: ' + sourceNumLocal + ' | Cycles: ' + Math.ceil(sourceNumLocal * cyclesX / 4) : 'Populations: ' + result.pops + ' | Iterations: ' + result.iter) + ' | Time: ' + time / 1000 + '&nbsp;s' + '"></div>';
+      outputMsg += "</th></tr>";
+      for (i = 0, n = resultsTable.length; i < n; i++) {
+        if (printZeroes || resultsTable[i][1] != 0) {
+          currentResult = resultsTable[i][1] * 100;
+          outputMsg += "<tr>"
+          outputMsg += (addBarChart == 2 ? '<td class="barchartmode2 nonselectable" style="background-image: linear-gradient(90deg, #aaa ' + currentResult + '%, #444 ' + currentResult + '%);"></td>' : '');
+          outputMsg += '<td class="singleleftcolumn">' + currentResult.toFixed(1) + '</td><td class="singlerightcolumn">' + resultsTable[i][0] + '</td>';
+          outputMsg += (addBarChart == 1 ? '<tr><td colspan= "2" class="barchartmode1 nonselectable" style="background-image: linear-gradient(90deg, #ff8221 ' + currentResult + '%, #666 ' + currentResult + '%);"></td></tr>' : '');
+        }
+      }
+      outputMsg += "</table>";
+      outputMsg += buildPieSvg(resultsTable, 220);
+      printOutput(outputMsg, "singleoutput");
+    }
+
+    function printOutput(what, where) {
+      const output = document.getElementById(where);
+      output.innerHTML = what + "<br><hr>" + output.innerHTML;
+    }
+
+    function restoreLookupFull(which) {
+      const ta = document.getElementById(which);
+      const input = document.getElementById(which + "Lookup");
+      if (!ta) return;
+      if (ta.dataset.filtering && ta.dataset.fullValue !== undefined) {
+        ta.value = ta.dataset.fullValue;
+        ta.dataset.filtering = "";
+      }
+      if (input) input.value = "";
+      ta.dataset.fullValue = ta.value;
+    }
+    function processInput() {
+      restoreLookupFull("source");
+      restoreLookupFull("target");
+      // Re-run if data changed OR target buttons not yet built for existing data
+      const needsButtons = document.getElementById("distancetargets") &&
+        document.getElementById("distancetargets").children.length === 0 &&
+        document.getElementById("source").value.trim() &&
+        document.getElementById("target").value.trim();
+      if (!inputHasChanged && !needsButtons) {
+        return;
+      }
+      let errors = 0, message = "";
+
+      function clearTargetButtons() {
+        document.getElementById("distancetargets").innerHTML = "";
+        document.getElementById("singletargets").innerHTML = "";
+        document.getElementById("runmulti").disabled = true;
+        document.getElementById("runalldist").disabled = true;
+        document.getElementById("runallsingle").disabled = true;
+        clearTwoDistOpt();
+      }
+
+      function textareaToArray(textareaId) {
+        let i, j, m, n, lines, columnNum;
+        const textarea = document.getElementById(textareaId);
+        const label = textareaId.toUpperCase();
+        let text = textarea.value.replace(/\r\n/g, "\n").replace(/\"/g, "").replace(/\</g, "&lt;").replace(/\>/g, "&gt;");
+        // Split lines; keep structure but drop blank / whitespace-only lines silently
+        lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+        if (lines.length === 0) {
+          message += "ERROR! No data in " + label + ". ";
+          errors = 1;
+          return;
+        }
+        // Strip surrounding whitespace from each field; reject non-numeric cells
+        const parsed = [];
+        for (i = 0; i < lines.length; i++) {
+          // Collapse consecutive commas would hide missing values — treat as error only if a field is empty
+          const parts = lines[i].split(",").map(s => s.trim());
+          if (parts.length < 2) {
+            message += "ERROR! Line " + (i + 1) + " in " + label + " is not Name,PC1,...,PCn. ";
+            errors = 1;
+            return;
+          }
+          const name = parts[0];
+          if (!name) {
+            message += "ERROR! Line " + (i + 1) + " in " + label + " has an empty name. ";
+            errors = 1;
+            return;
+          }
+          const nums = [];
+          for (j = 1; j < parts.length; j++) {
+            if (parts[j] === "") {
+              message += "ERROR! Missing value on line " + (i + 1) + " in " + label + ". ";
+              errors = 1;
+              return;
+            }
+            const num = Number(parts[j].replace(/,/g, "."));
+            if (isNaN(num)) {
+              message += "ERROR! Non-numerical value on line " + (i + 1) + " in " + label + ". ";
+              errors = 1;
+              return;
+            }
+            nums.push(num);
+          }
+          parsed.push([name].concat(nums));
+        }
+        columnNum = parsed[0].length;
+        for (i = 1; i < parsed.length; i++) {
+          if (parsed[i].length !== columnNum) {
+            message += "ERROR! Variable column number in " + label + " data (line " + (i + 1) + "). ";
+            errors = 1;
+            return;
+          }
+        }
+        return parsed;
+      }
+
+      sourceArray = textareaToArray("source");
+      targetArray = textareaToArray("target");
+
+      if (errors) {
+        clearTargetButtons();
+        showNotification(message, 1);
+        return;
+      } else if (sourceArray[0].length !== targetArray[0].length) {
+        clearTargetButtons();
+        message += "ERROR! Column number mismatch.";
+        showNotification(message, 1);
+        return;
+      } else {
+        let targets = "", i;
+        clearNotification();
+        if (message.length > 0) {
+          showNotification(message);
+        }
+        sourceNum = sourceArray.length;
+        targetNum = targetArray.length;
+        dimensions = sourceArray[0].length - 1;
+
+        let sourceOptions = "";
+        for (i = 0; i < sourceNum; i++) {
+          sourceOptions += '<option value="' + sourceArray[i][0] + '">';
+        }
+        document.getElementById("oraclesourcelist").innerHTML = sourceOptions;
+
+        for (i = 0; i < targetNum; i++) {
+          targets = targets + '<button class="buttons button100" onclick="dispatcher(this,' + i + ')">' + targetArray[i][0] + '</button>';
+        }
+        document.getElementById("distancetargets").innerHTML = targets;
+        document.getElementById("oracletargets").innerHTML = targets;
+        document.getElementById("singletargets").innerHTML = targets;
+        document.getElementById("runmulti").disabled = false;
+        document.getElementById("runalldist").disabled = false;
+        document.getElementById("runalloracle").disabled = false;
+        document.getElementById("runallsingle").disabled = false;
+        clearTwoDistOpt();
+        inputHasChanged = false;
+      }
+    }
+
+    function openTab(tabid, button) {
+      let i, n;
+      const tabs = document.getElementsByClassName("tab"),
+        tablinks = document.getElementsByClassName("tablink");
+      for (i = 0, n = tabs.length; i < n; i++) {
+        tabs[i].style.display = "none";
+      }
+      for (i = 0, n = tablinks.length; i < n; i++) {
+        tablinks[i].classList.add("inactive");
+      }
+      document.getElementById(tabid).style.display = "block";
+      document.getElementById(tabid).focus();
+      if (tabid == "source_tab") {
+        document.getElementById("source").scrollLeft = 0;
+        document.getElementById("source").scrollTop = 0;
+      }
+      if (tabid == "target_tab") {
+        document.getElementById("target").scrollLeft = 0;
+        document.getElementById("target").scrollTop = 0;
+      }
+      button.classList.remove("inactive");
+      if (tabid == "data") {
+        if (af == false) {
+          document.body.addEventListener("keydown", autofocus);
+          af = true;
+        }
+      } else {
+        if (af == true) {
+          document.body.removeEventListener("keydown", autofocus);
+          af = false;
+        }
+      }
+    }
+
+    function autofocus(e) {
+      let pressed = e.which || e.keyCode;
+      if (pressed == 16) { document.getElementById("filter").focus(); }
+    }
+
+    function processFiles(elmnt) {
+      for (let file of elmnt.files) {
+        let reader = new FileReader(),
+          id = dataListId, name = file.name;
+        dataStore.push({
+          used: false,
+          name: "",
+          samples: [],
+          data: []
+        });
+        dataListId++;
+        reader.readAsText(file);
+        reader.onload = function () {
+          let text = reader.result;
+          text = text.trim()
+            .replace(/\r\n/g, "\n")
+            .replace(/^\,(.*)\n/mg, "")
+            .replace(/\"/g, "")
+            .replace(/\</g, "&lt;")
+            .replace(/\>/g, "&gt;")
+            .replace(/[^\S\n]/g, "")
+            .replace(/\n+/g, "\n");
+          name = name.replace(/\_/g, " ")
+            .replace(/\.txt$/i, "")
+            .replace(/\.csv$/i, "");
+          dataStore[id].used = true;
+          dataStore[id].name = name;
+          dataStore[id].samples = text.split("\n");
+          dataStore[id].data = text.split("\n");
+          for (let index in dataStore[id].samples) {
+            dataStore[id].samples[index] = "," + dataStore[id].samples[index].split(",")[0] + ",";
+          }
+          refreshDataList();
+        };
+        reader.onerror = function () {
+          console.log("Error loading " + file.name + " file.");
+        };
+      }
+    }
+
+    function downloadReadySet(index) {
+      const d = discoveredDatasets[index];
+      if (!d) return;
+      fetchDatasetText(index)
+        .then(text => {
+          const blob = new Blob([text], { type: 'text/plain' });
+          const element = document.createElement('a');
+          element.href = URL.createObjectURL(blob);
+          element.download = d.file;
+          document.body.appendChild(element);
+          element.click();
+          document.body.removeChild(element);
+          showNotification(d.name + " download started.", 0);
+        })
+        .catch(err => {
+          console.error("Error downloading:", err);
+          showNotification("Failed to download " + d.name + ".", 1);
+        });
+    }
+
+    function clearDataTransfer() {
+      document.getElementById("source").value = "";
+      document.getElementById("target").value = "";
+      document.getElementById("filteroutput").value = "";
+      inputHasChanged = true;
+      showNotification("Source, Target, and Filter Output cleared.", 0);
+    }
+
+    function loadReadySet(index) {
+      const d = discoveredDatasets[index];
+      if (!d) return;
+      showNotification("Loading " + d.name + " from GitHub…", 0);
+      fetchDatasetText(index)
+        .then(text => {
+          text = text.trim();
+          let processedText = text
+            .replace(/\r\n/g, "\n")
+            .replace(/^\,(.*)\n/mg, "")
+            .replace(/\"/g, "")
+            .replace(/\</g, "&lt;")
+            .replace(/\>/g, "&gt;")
+            .replace(/[^\S\n]/g, "")
+            .replace(/\n+/g, "\n");
+          let samples = processedText.split("\n");
+          let dataList = processedText.split("\n");
+          for (let idx in samples) {
+            samples[idx] = "," + samples[idx].split(",")[0] + ",";
+          }
+          dataActive = -1;
+          dataCurrent = { name: d.name, samples: samples, data: dataList };
+          const sourceEl = document.getElementById("source");
+          sourceEl.value = text;
+          sourceEl.scrollLeft = 0;
+          sourceEl.scrollTop = 0;
+          inputHasChanged = true;
+          refreshDataList();
+          dataFilter(true);
+          showNotification(d.name + " loaded from GitHub.", 0);
+        })
+        .catch(err => {
+          console.error("Error loading:", err);
+          showNotification("Error loading " + d.name, 1);
+        });
+    }
+
+    function refreshDataList() {
+      let html = "";
+      for (let i = 0, n = dataStore.length; i < n; i++) {
+        if (dataStore[i].used === true) {
+          html += "<button class=\"buttons button100 button-data " + (i == dataActive ? "dataButtonActive" : "") + "\" onclick=\"getData(" + i + ", this)\">" + dataStore[i].name + "</button>";
+        }
+      }
+      document.getElementById("datalist").innerHTML = html;
+    }
+
+    function removeClass(className, elements) {
+      for (let element of elements) {
+        element.classList.remove(className);
+      }
+    }
+
+    function getData(id, button) {
+      let dataButtons = document.querySelectorAll('#datalist button');
+      removeClass("dataButtonActive", dataButtons);
+      if (id == dataActive) {
+        dataActive = -1;
+        dataCurrent = false;
+        dataFilter(true);
+      } else {
+        dataActive = id;
+        button.classList.add("dataButtonActive");
+        dataCurrent = dataStore[id];
+        dataFilter(true);
+      }
+    }
+
+    function dataFilter(highlight = false) {
+      let output = document.getElementById("filteroutput"),
+        input = document.getElementById("filter").value;
+      input = input.trim()
+        .replace(/\!/g, " ! ")
+        .replace(/[^\S\n]+/g, " ")
+        .replace(/\!\s/g, "!")
+        .replace(/\!+/g, "!")
+        .replace(/\,+/g, ",")
+        .replace(/\?+/g, "?")
+        .replace(/[\s]*\?[\s]*/g, "?");
+      input = input.split("?");
+      for (let item in input) {
+        input[item] = input[item].split(" ");
+      }
+      for (let item in input) {
+        input[item] = input[item].filter(filter1);
+      }
+      input = input.filter(filter2);
+      function filter1(value) {
+        return (value != "!"
+          && value != ""
+          && value != ","
+          && value != "!,"
+          && value != ",!");
+      }
+      function filter2(value) {
+        return (value.length > 0);
+      }
+      if (dataCurrent) {
+        if (input.length < 1) {
+          output.value = dataCurrent.data.join("\n");
+        } else {
+          let toOutput = "";
+          for (let i = 0, n = dataCurrent.samples.length; i < n; i++) {
+            for (let item of input) {
+              let pass = 0;
+              for (let item2 of item) {
+                if (item2.charAt(0) != "!") {
+                  if (dataCurrent.samples[i].indexOf(item2) > -1) {
+                    pass++;
+                  }
+                } else {
+                  item2 = item2.substring(1);
+                  if (dataCurrent.samples[i].indexOf(item2) < 0) {
+                    pass++;
+                  }
+                }
+              }
+              if (item.length == pass) {
+                toOutput += dataCurrent.data[i] + "\n";
+                break
+              }
+            }
+          }
+          toOutput = toOutput.trim();
+          output.value = toOutput;
+          if (highlight) { glow(document.getElementById("filter")) }
+        }
+      } else {
+        output.value = "";
+      }
+    }
+
+    function resetFilter() {
+      document.getElementById("filter").value = "";
+      dataFilter();
+    }
+
+    function glow(button) {
+      button.style.color = "lime";
+      function restyle() {
+        button.style.transition = "all 1s"
+        button.style.color = "";
+      }
+      function restyle2() {
+        button.style.transition = "inherit";
+      }
+      setTimeout(restyle, 200);
+      setTimeout(restyle2, 1000);
+    }
+
+    function copyTo(where, button) {
+      let elmnt = document.getElementById(where),
+        val = elmnt.value.trim(),
+        add = document.getElementById("filteroutput").value.trim();
+      if (val != "") { val = val + "\n" }
+      if (add != "") { add = add + "\n" }
+      if (addRep) { val = "" }
+      elmnt.value = val + add;
+      inputHasChanged = true;
+      glow(button);
+    }
+
+    
+    /* ===== Custom Population Generator ===== */
+    let cgenGhostRows = []; // {name, vec, weight, sign: +1|-1}
+    let cgenWeightRows = []; // {name, vec, n}
+
+    function cgenParseLines(raw) {
+      const lines = raw.trim().replace(/\r\n/g, "\n").replace(/\"/g, "").split("\n").filter(l => l.trim());
+      const out = [];
+      for (const line of lines) {
+        const parts = line.split(",");
+        if (parts.length < 3) continue;
+        const name = parts[0].trim();
+        const nums = parts.slice(1).map(x => Number(String(x).replace(/,/g, ".")));
+        if (nums.some(n => isNaN(n))) continue;
+        out.push({ name, vec: nums });
+      }
+      return out;
+    }
+
+    function cgenExtractN(name) {
+      // Match n=123 anywhere in the label (e.g. Pop_n=12 or Pop n=12)
+      const m = name.match(/n\s*=\s*(\d+)/i);
+      return m ? parseInt(m[1], 10) : null;
+    }
+
+    function cgenSwitchMode() {
+      const mode = document.getElementById("cgenMode").value;
+      document.getElementById("cgenGhostPanel").style.display = mode === "ghost" ? "block" : "none";
+      document.getElementById("cgenWeightPanel").style.display = mode === "weighted" ? "block" : "none";
+    }
+
+    function cgenGhostAdd(sign) {
+      const raw = document.getElementById("cgenGhostInput").value;
+      const weight = parseFloat(document.getElementById("cgenGhostWeight").value);
+      if (isNaN(weight)) { showNotification("Invalid weight.", 1); return; }
+      const parsed = cgenParseLines(raw);
+      if (!parsed.length) { showNotification("No valid G25 lines found.", 1); return; }
+      const s = sign === "-" ? -1 : 1;
+      for (const p of parsed) {
+        cgenGhostRows.push({ name: p.name, vec: p.vec, weight: Math.abs(weight), sign: s });
+      }
+      document.getElementById("cgenGhostInput").value = "";
+      cgenRenderGhost();
+    }
+
+    function cgenGhostRemove(i) {
+      cgenGhostRows.splice(i, 1);
+      cgenRenderGhost();
+    }
+
+    function cgenRenderGhost() {
+      const list = document.getElementById("cgenGhostList");
+      let addSum = 0;
+      list.innerHTML = cgenGhostRows.map((r, i) => {
+        if (r.sign > 0) addSum += r.weight;
+        const signLabel = r.sign > 0 ? "+" : "−";
+        const color = r.sign > 0 ? "var(--accent)" : "var(--danger)";
+        return `<div class="cgen-row"><span style="color:${color};font-weight:700;width:1.2em;">${signLabel}</span><span class="cgen-name">${r.name}</span><span class="cgen-meta">${r.weight}%</span><button class="buttons small" onclick="cgenGhostRemove(${i})">✕</button></div>`;
+      }).join("");
+      const sumEl = document.getElementById("cgenGhostSum");
+      const ok = Math.abs(addSum - 100) < 0.05;
+      sumEl.textContent = `Additive total: ${addSum.toFixed(2)}% ${ok ? "✓" : "(need 100%)"}`;
+      sumEl.style.color = ok ? "var(--accent)" : "var(--danger)";
+    }
+
+    function cgenGhostClear() {
+      cgenGhostRows = [];
+      cgenRenderGhost();
+      document.getElementById("cgenOutput").value = "";
+    }
+
+    function cgenGhostGenerate() {
+      if (!cgenGhostRows.length) { showNotification("Add at least one population.", 1); return; }
+      let addSum = 0;
+      for (const r of cgenGhostRows) if (r.sign > 0) addSum += r.weight;
+      if (Math.abs(addSum - 100) > 0.05) {
+        showNotification("Additive weights must sum to 100% (currently " + addSum.toFixed(2) + "%).", 1);
+        return;
+      }
+      const dim = cgenGhostRows[0].vec.length;
+      for (const r of cgenGhostRows) {
+        if (r.vec.length !== dim) { showNotification("Dimension mismatch between populations.", 1); return; }
+      }
+      const out = new Array(dim).fill(0);
+      for (const r of cgenGhostRows) {
+        const w = (r.sign * r.weight) / 100;
+        for (let d = 0; d < dim; d++) out[d] += w * r.vec[d];
+      }
+      let name = (document.getElementById("cgenName").value || "Custom").trim().replace(/,/g, "_");
+      const line = name + "," + out.map(v => (Math.abs(v) < 1e-12 ? 0 : v).toFixed(8)).join(",");
+      document.getElementById("cgenOutput").value = line;
+      showNotification("Ghost population generated.", 0);
+    }
+
+    function cgenWeightAdd() {
+      const raw = document.getElementById("cgenWeightInput").value;
+      const parsed = cgenParseLines(raw);
+      if (!parsed.length) { showNotification("No valid G25 lines found.", 1); return; }
+      for (const p of parsed) {
+        const extracted = cgenExtractN(p.name);
+        const n = extracted != null ? extracted : 1;
+        cgenWeightRows.push({ name: p.name, vec: p.vec, n });
+      }
+      document.getElementById("cgenWeightInput").value = "";
+      cgenRenderWeight();
+    }
+
+    function cgenWeightRemove(i) {
+      cgenWeightRows.splice(i, 1);
+      cgenRenderWeight();
+    }
+
+    function cgenWeightUpdateN(i, val) {
+      const n = parseInt(val, 10);
+      if (!isNaN(n) && n >= 1) cgenWeightRows[i].n = n;
+      cgenRenderWeight();
+    }
+
+    function cgenRenderWeight() {
+      const list = document.getElementById("cgenWeightList");
+      let total = 0;
+      list.innerHTML = cgenWeightRows.map((r, i) => {
+        total += r.n;
+        return `<div class="cgen-row"><span class="cgen-name">${r.name}</span><input type="number" class="cgen-n" min="1" step="1" value="${r.n}" onchange="cgenWeightUpdateN(${i}, this.value)"><button class="buttons small" onclick="cgenWeightRemove(${i})">✕</button></div>`;
+      }).join("");
+      document.getElementById("cgenWeightSum").textContent = "Total n: " + total;
+    }
+
+    function cgenWeightClear() {
+      cgenWeightRows = [];
+      cgenRenderWeight();
+      document.getElementById("cgenOutput").value = "";
+    }
+
+    function cgenWeightGenerate() {
+      if (!cgenWeightRows.length) { showNotification("Add at least one population.", 1); return; }
+      const dim = cgenWeightRows[0].vec.length;
+      let N = 0;
+      for (const r of cgenWeightRows) {
+        if (r.vec.length !== dim) { showNotification("Dimension mismatch between populations.", 1); return; }
+        N += r.n;
+      }
+      if (N <= 0) { showNotification("Total n must be > 0.", 1); return; }
+      const out = new Array(dim).fill(0);
+      for (const r of cgenWeightRows) {
+        const w = r.n / N;
+        for (let d = 0; d < dim; d++) out[d] += w * r.vec[d];
+      }
+      let base = (document.getElementById("cgenName").value || "Custom").trim().replace(/,/g, "_");
+      // strip existing _(n=…) if user included it
+      base = base.replace(/_?\(?n\s*=\s*\d+\)?/gi, "").replace(/__+/g,"_").replace(/^_|_$/g,"");
+      const name = base + "_(n=" + N + ")";
+      const line = name + "," + out.map(v => (Math.abs(v) < 1e-12 ? 0 : v).toFixed(8)).join(",");
+      document.getElementById("cgenOutput").value = line;
+      showNotification("Weighted average generated (n=" + N + ").", 0);
+    }
+
+    function cgenCopyOutput() {
+      const ta = document.getElementById("cgenOutput");
+      if (!ta.value) return;
+      ta.select();
+      try { document.execCommand("copy"); showNotification("Copied.", 0); } catch (e) {}
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(ta.value).then(() => showNotification("Copied.", 0));
+      }
+    }
+
+    function cgenSendTo(where) {
+      const val = document.getElementById("cgenOutput").value.trim();
+      if (!val) { showNotification("Nothing to send.", 1); return; }
+      const elmnt = document.getElementById(where);
+      let cur = elmnt.value.trim();
+      if (cur) cur += "\n";
+      elmnt.value = cur + val + "\n";
+      inputHasChanged = true;
+      showNotification("Sent to " + where + ".", 0);
+    }
+
+    
+    function lookupFilter(which) {
+      const ta = document.getElementById(which);
+      const input = document.getElementById(which + "Lookup");
+      if (!ta || !input) return;
+      if (!ta.dataset.fullValue) ta.dataset.fullValue = ta.value;
+      // When user types in textarea, keep fullValue in sync if no active filter
+      const q = input.value.trim();
+      if (!q) {
+        if (ta.dataset.fullValue !== undefined) {
+          // don't overwrite if user has been editing filtered view — only restore when clearing
+        }
+        return;
+      }
+      // Store original on first filter
+      if (!ta.dataset.filtering) {
+        ta.dataset.fullValue = ta.value;
+        ta.dataset.filtering = "1";
+      }
+      const lines = (ta.dataset.fullValue || "").split("\n");
+      const ql = q.toLowerCase();
+      const filtered = lines.filter(l => l.toLowerCase().indexOf(ql) >= 0);
+      ta.value = filtered.join("\n");
+    }
+    // Clear filter state when user edits source/target directly after filtering
+    document.addEventListener("DOMContentLoaded", function() {
+      ["source", "target"].forEach(id => {
+        const ta = document.getElementById(id);
+        const input = document.getElementById(id + "Lookup");
+        if (!ta || !input) return;
+        ta.addEventListener("input", function() {
+          if (!input.value.trim()) {
+            ta.dataset.fullValue = ta.value;
+            ta.dataset.filtering = "";
+          }
+        });
+        input.addEventListener("input", function() {
+          if (!this.value.trim()) {
+            if (ta.dataset.fullValue !== undefined && ta.dataset.filtering) {
+              ta.value = ta.dataset.fullValue;
+            }
+            ta.dataset.filtering = "";
+            ta.dataset.fullValue = ta.value;
+          } else {
+            lookupFilter(id);
+          }
+        });
+      });
+    });
+
+    
+    /* ===== Stability Checker (NNLS + bootstrap) ===== */
+    let stabLoadedSources = [];
+    let stabLastResults = null;
+    let stabChartMode = 'bar';
+
+    function stabParseLine(line) {
+      const parts = line.split(',').map(s => s.trim());
+      if (parts.length < 2) return null;
+      const label = parts[0];
+      const nums = parts.slice(1).map(Number);
+      if (!label || nums.some(n => Number.isNaN(n))) return null;
+      return { label, vec: nums };
+    }
+
+    function stabEscape(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function stabLoadSources() {
+      const lines = document.getElementById('stabSourcesInput').value.split('\n').map(l => l.trim()).filter(l => l.length);
+      const parsed = [], bad = [];
+      for (const line of lines) {
+        const p = stabParseLine(line);
+        if (p) parsed.push(p); else bad.push(line);
+      }
+      const finalSources = [];
+      const used = new Set();
+      for (const p of parsed) {
+        if (used.has(p.label)) continue;
+        used.add(p.label);
+        finalSources.push(p);
+      }
+      const previouslyChecked = new Set(
+        Array.from(document.querySelectorAll('.stab-src-check:checked')).map(el => el.value)
+      );
+      const oldLabels = new Set(stabLoadedSources.map(s => s.label));
+      stabLoadedSources = finalSources;
+      const list = document.getElementById('stabSourceList');
+      list.innerHTML = finalSources.map(s => {
+        const isChecked = previouslyChecked.has(s.label) || !oldLabels.has(s.label);
+        return `<label class="cgen-row" style="cursor:pointer;"><input type="checkbox" value="${stabEscape(s.label)}" class="stab-src-check" ${isChecked ? 'checked' : ''} style="width:auto;"><span class="cgen-name">${stabEscape(s.label)}</span></label>`;
+      }).join('');
+      list.style.display = finalSources.length ? 'block' : 'none';
+      const st = document.getElementById('stabLoadStatus');
+      const parts = [`${finalSources.length} source${finalSources.length===1?'':'s'} loaded`];
+      if (bad.length) parts.push(`${bad.length} malformed skipped`);
+      st.textContent = parts.join(' · ') + '. Uncheck any to exclude.';
+      st.style.color = finalSources.length >= 2 ? 'var(--accent)' : 'var(--danger)';
+    }
+
+    function stabSolveSymmetric(M, v) {
+      const n = v.length;
+      const A = M.map(row => row.slice());
+      const b = v.slice();
+      for (let i = 0; i < n; i++) A[i][i] += 1e-9;
+      for (let col = 0; col < n; col++) {
+        let piv = col;
+        for (let r = col+1; r < n; r++) if (Math.abs(A[r][col]) > Math.abs(A[piv][col])) piv = r;
+        if (piv !== col) { [A[col],A[piv]]=[A[piv],A[col]]; [b[col],b[piv]]=[b[piv],b[col]]; }
+        const d = A[col][col] || 1e-12;
+        for (let r = 0; r < n; r++) {
+          if (r === col) continue;
+          const f = A[r][col] / d;
+          if (f === 0) continue;
+          for (let c = col; c < n; c++) A[r][c] -= f * A[col][c];
+          b[r] -= f * b[col];
+        }
+      }
+      return b.map((val,i) => val / (A[i][i] || 1e-12));
+    }
+
+    function stabDot(u,v){ let s=0; for(let i=0;i<u.length;i++) s+=u[i]*v[i]; return s; }
+
+    function stabNnls(A, b) {
+      const m = A.length, n = A[0].length;
+      const At = Array.from({length:n}, (_,j) => A.map(row => row[j]));
+      const AtA = At.map(rowj => At.map(rowk => stabDot(rowj,rowk)));
+      const Atb = At.map(rowj => stabDot(rowj,b));
+      let x = new Array(n).fill(0);
+      let P = new Array(n).fill(false);
+      let iter = 0;
+      const maxIter = 3*n + 10;
+      while (iter++ < maxIter) {
+        const w = new Array(n).fill(0);
+        for (let j=0;j<n;j++){
+          let s = Atb[j];
+          for (let k=0;k<n;k++) s -= AtA[j][k]*x[k];
+          w[j] = s;
+        }
+        let maxW = -Infinity, maxJ = -1;
+        for (let j=0;j<n;j++){
+          if (!P[j] && w[j] > maxW) { maxW = w[j]; maxJ = j; }
+        }
+        if (maxJ === -1 || maxW <= 1e-10) break;
+        P[maxJ] = true;
+        let innerGuard = 0;
+        while (innerGuard++ < maxIter) {
+          const idx = [];
+          for (let j=0;j<n;j++) if (P[j]) idx.push(j);
+          const subM = idx.map(j => idx.map(k => AtA[j][k]));
+          const subV = idx.map(j => Atb[j]);
+          const subZ = stabSolveSymmetric(subM, subV);
+          const z = new Array(n).fill(0);
+          idx.forEach((j,i) => z[j] = subZ[i]);
+          let allPos = true;
+          for (const j of idx) if (z[j] <= 1e-12) { allPos = false; break; }
+          if (allPos) { x = z; break; }
+          let alpha = Infinity;
+          for (const j of idx) {
+            if (z[j] <= 1e-12) {
+              const cand = x[j] / (x[j] - z[j]);
+              if (cand < alpha) alpha = cand;
+            }
+          }
+          if (!isFinite(alpha)) alpha = 0;
+          for (let j=0;j<n;j++) x[j] = x[j] + alpha*(z[j]-x[j]);
+          for (const j of idx) if (x[j] <= 1e-9) P[j] = false;
+        }
+      }
+      for (let j=0;j<n;j++) if (x[j] < 0) x[j] = 0;
+      return x;
+    }
+
+    function stabFitNormalized(targetVec, sourceMatrix) {
+      const w = stabNnls(sourceMatrix, targetVec);
+      const total = w.reduce((a,b)=>a+b,0);
+      if (total === 0) return w;
+      return w.map(v => v/total);
+    }
+
+    function stabComputeBaseline(targetVec, sourceMatrix) {
+      const rawWeights = stabNnls(sourceMatrix, targetVec);
+      const total = rawWeights.reduce((a,b)=>a+b,0);
+      const normalized = total > 0 ? rawWeights.map(v => v/total) : rawWeights.slice();
+      const dims = sourceMatrix.length;
+      const nSources = rawWeights.length;
+      let sumSq = 0;
+      for (let d = 0; d < dims; d++) {
+        let modeled = 0;
+        for (let j = 0; j < nSources; j++) modeled += sourceMatrix[d][j] * rawWeights[j];
+        const diff = targetVec[d] - modeled;
+        sumSq += diff * diff;
+      }
+      return { normalized, distance: Math.sqrt(sumSq) * 100 };
+    }
+
+    function stabMulberry32(seed) {
+      return function() {
+        seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function stabAvg(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+    function stabStdev(arr, mean){
+      const v = arr.reduce((s,x)=>s+Math.pow(x-mean,2),0) / (arr.length-1);
+      return Math.sqrt(v);
+    }
+
+    function stabRun() {
+      const tLine = document.getElementById('stabTargetInput').value.trim().split('\n').map(l=>l.trim()).filter(l=>l.length)[0];
+      const target = tLine ? stabParseLine(tLine) : null;
+      if (!stabLoadedSources.length && document.getElementById('stabSourcesInput').value.trim()) {
+        stabLoadSources();
+      }
+      const checkedLabels = new Set(
+        Array.from(document.querySelectorAll('.stab-src-check:checked')).map(el => el.value)
+      );
+      const sources = stabLoadedSources.filter(s => checkedLabels.has(s.label));
+      const runStatus = document.getElementById('stabRunStatus');
+      const runBtn = document.getElementById('stabRunBtn');
+      if (!target) { runStatus.textContent = 'Enter a target line: Label,c1,c2,...,cn'; runStatus.style.color='var(--danger)'; return; }
+      if (!stabLoadedSources.length) { runStatus.textContent = 'Enter sources and click Load sources.'; runStatus.style.color='var(--danger)'; return; }
+      if (sources.length < 2) { runStatus.textContent = 'Check at least two sources.'; runStatus.style.color='var(--danger)'; return; }
+      const dim = target.vec.length;
+      const mismatched = sources.filter(s => s.vec.length !== dim);
+      if (mismatched.length) { runStatus.textContent = 'Dimension mismatch with: ' + mismatched.map(s=>s.label).join(', '); runStatus.style.color='var(--danger)'; return; }
+      if (sources.some(s => s.label === target.label)) { runStatus.textContent = 'A source has the same label as the target.'; runStatus.style.color='var(--danger)'; return; }
+
+      runStatus.textContent = 'Running…'; runStatus.style.color='var(--text-2)';
+      runBtn.disabled = true;
+
+      setTimeout(() => {
+        try {
+          const reps = Math.max(200, Math.min(20000, parseInt(document.getElementById('stabRepsInput').value) || 2000));
+          const sourceLabels = sources.map(s => s.label);
+          const COORDS = {};
+          COORDS[target.label] = target.vec;
+          sources.forEach(s => { COORDS[s.label] = s.vec; });
+          const targetVec = target.vec;
+          const DIM = dim;
+          const buildRows = (dims) => dims.map(d => sourceLabels.map(l => COORDS[l][d]));
+          const allDimIdx = Array.from({length:DIM}, (_,i) => i);
+
+          const baselineFit = stabComputeBaseline(targetVec, buildRows(allDimIdx));
+          const baseline = baselineFit.normalized;
+          const distance = baselineFit.distance;
+
+          const rng = stabMulberry32(42);
+          const bootResults = [];
+          for (let b=0; b<reps; b++) {
+            const idx = [];
+            for (let i=0;i<DIM;i++) idx.push(Math.floor(rng()*DIM));
+            bootResults.push(stabFitNormalized(idx.map(i => targetVec[i]), buildRows(idx)));
+          }
+          const bootMean = sourceLabels.map((_,j) => stabAvg(bootResults.map(r=>r[j])));
+          const bootSD = sourceLabels.map((_,j) => stabStdev(bootResults.map(r=>r[j]), bootMean[j]));
+
+          const jackFits = [];
+          for (let i=0;i<DIM;i++) {
+            const idx = allDimIdx.filter(d => d !== i);
+            jackFits.push(stabFitNormalized(idx.map(d => targetVec[d]), buildRows(idx)));
+          }
+          const jackMean = sourceLabels.map((_,j) => stabAvg(jackFits.map(r=>r[j])));
+          const jackSD = sourceLabels.map((_,j) => {
+            const varSum = jackFits.reduce((s,r) => s + Math.pow(r[j]-jackMean[j],2), 0);
+            return Math.sqrt((DIM-1)/DIM * varSum);
+          });
+          const Z = sourceLabels.map((_,j) => bootSD[j] > 1e-9 ? baseline[j]/bootSD[j] : (baseline[j] > 0 ? Infinity : 0));
+
+          stabLastResults = { sourceLabels, baseline, bootSD, jackSD, Z, distance };
+          stabRenderResults();
+          runStatus.textContent = `Done — ${reps} bootstrap replicates.`;
+          runStatus.style.color = 'var(--accent)';
+        } catch (e) {
+          console.error(e);
+          runStatus.textContent = 'Fit failed — check coordinates.';
+          runStatus.style.color = 'var(--danger)';
+        } finally {
+          runBtn.disabled = false;
+        }
+      }, 20);
+    }
+
+    function stabZColor(z){
+      if (!isFinite(z) || z >= 3) return 'var(--accent)';
+      if (z >= 1) return '#f0a04b';
+      return 'var(--text-2)';
+    }
+    function stabTierColor(z){
+      if (!isFinite(z) || z >= 3) return '#4fb8a6';
+      if (z >= 1) return '#f0a04b';
+      return '#6b7385';
+    }
+
+    function stabRenderResults(){
+      document.getElementById('stabEmptyState').style.display = 'none';
+      document.getElementById('stabResultsArea').style.display = 'block';
+      document.getElementById('stabChartToggle').style.display = 'flex';
+      const { sourceLabels, baseline, bootSD, jackSD, Z, distance } = stabLastResults;
+      document.getElementById('stabDistanceStat').innerHTML =
+        `<span style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);">G25 fit</span>` +
+        `<span style="font-size:18px;font-weight:700;color:var(--text-0);">${distance.toFixed(4)}</span>` +
+        `<span style="font-size:11px;color:var(--text-2);margin-left:auto;">Euclidean distance · lower is tighter</span>`;
+      document.getElementById('stabResultsBody').innerHTML = sourceLabels.map((lbl,j) => `
+        <tr>
+          <td style="text-align:left;">${stabEscape(lbl)}</td>
+          <td>${(baseline[j]*100).toFixed(1)}%</td>
+          <td>${(bootSD[j]*100).toFixed(1)}%</td>
+          <td>${(jackSD[j]*100).toFixed(1)}%</td>
+          <td style="color:${stabZColor(Z[j])};font-weight:700;">${isFinite(Z[j]) ? Z[j].toFixed(2) : '∞'}</td>
+        </tr>`).join('');
+      stabDrawChart();
+    }
+
+    function stabSetChart(mode){
+      stabChartMode = mode;
+      document.querySelectorAll('#stabChartToggle button').forEach(b => {
+        b.style.background = b.dataset.mode === mode ? 'rgba(79,184,166,0.2)' : '';
+        b.style.color = b.dataset.mode === mode ? 'var(--accent)' : '';
+      });
+      if (stabLastResults) stabDrawChart();
+    }
+
+    function stabSetupCanvas(canvas){
+      const dpr = window.devicePixelRatio || 1;
+      const parent = canvas.parentElement;
+      const cssWidth = Math.max(280, parent.clientWidth - 32);
+      const cssHeight = 380;
+      canvas.width = Math.round(cssWidth * dpr);
+      canvas.height = Math.round(cssHeight * dpr);
+      canvas.style.width = cssWidth + 'px';
+      canvas.style.height = cssHeight + 'px';
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, cssWidth, cssHeight);
+      return { ctx, width: cssWidth, height: cssHeight };
+    }
+
+    function stabRenderLegend(){
+      const { sourceLabels, baseline, bootSD, Z } = stabLastResults;
+      document.getElementById('stabChartLegend').innerHTML = sourceLabels.map((lbl, i) =>
+        `<div class="pie-leg-row"><span class="pie-swatch" style="background:${stabTierColor(Z[i])}"></span>` +
+        `<span class="pie-leg-pct">${(baseline[i]*100).toFixed(1)}%</span>` +
+        `<span class="pie-leg-name">${stabEscape(lbl)} ±${(bootSD[i]*100).toFixed(1)}</span></div>`
+      ).join('');
+    }
+
+    function stabDrawBar(){
+      const { sourceLabels, baseline, bootSD, Z } = stabLastResults;
+      const canvas = document.getElementById('stabChartCanvas');
+      const { ctx, width, height } = stabSetupCanvas(canvas);
+      const padL = 40, padR = 14, padT = 16, padB = 46;
+      const plotW = width - padL - padR, plotH = height - padT - padB;
+      const n = sourceLabels.length, slot = plotW / n, barW = Math.min(48, slot * 0.5);
+      const yFor = (pct) => padT + plotH * (1 - pct/100);
+      ctx.font = '11px monospace';
+      ctx.fillStyle = '#a4acbd';
+      ctx.strokeStyle = '#2c3240';
+      ctx.lineWidth = 1;
+      [0,25,50,75,100].forEach(tv => {
+        const y = yFor(tv);
+        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(width - padR, y); ctx.stroke();
+        ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        ctx.fillText(tv + '%', padL - 8, y);
+      });
+      sourceLabels.forEach((lbl, i) => {
+        const cx = padL + slot * i + slot/2;
+        const fitPct = baseline[i]*100, sdPct = bootSD[i]*100;
+        const yTop = yFor(fitPct), yBase = yFor(0);
+        ctx.fillStyle = stabTierColor(Z[i]);
+        const bx = cx - barW/2, bh = yBase - yTop, r = Math.min(4, barW/2);
+        ctx.beginPath();
+        ctx.moveTo(bx, yBase); ctx.lineTo(bx, yTop + r);
+        ctx.arcTo(bx, yTop, bx + r, yTop, r);
+        ctx.lineTo(bx + barW - r, yTop);
+        ctx.arcTo(bx + barW, yTop, bx + barW, yTop + r, r);
+        ctx.lineTo(bx + barW, yBase); ctx.closePath(); ctx.fill();
+        const errTopY = yFor(Math.min(100, fitPct + sdPct));
+        const errBotY = yFor(Math.max(0, fitPct - sdPct));
+        ctx.strokeStyle = '#e8ebf1'; ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(cx, errTopY); ctx.lineTo(cx, errBotY);
+        ctx.moveTo(cx - 5, errTopY); ctx.lineTo(cx + 5, errTopY);
+        ctx.moveTo(cx - 5, errBotY); ctx.lineTo(cx + 5, errBotY);
+        ctx.stroke();
+        ctx.fillStyle = '#e8ebf1'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.fillText(fitPct.toFixed(1) + '%', cx, Math.min(errTopY, yTop) - 6);
+        ctx.fillStyle = '#a4acbd';
+        ctx.save(); ctx.translate(cx, yBase + 10);
+        const label = lbl.length > 14 ? lbl.slice(0,13) + '…' : lbl;
+        if (slot < 70) { ctx.rotate(-Math.PI/5); ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; }
+        else { ctx.textAlign = 'center'; ctx.textBaseline = 'top'; }
+        ctx.fillText(label, 0, 0); ctx.restore();
+      });
+      stabRenderLegend();
+    }
+
+    function stabDrawPie(){
+      const { sourceLabels, baseline, Z } = stabLastResults;
+      const canvas = document.getElementById('stabChartCanvas');
+      const { ctx, width, height } = stabSetupCanvas(canvas);
+      const cx = width/2, cy = height/2;
+      const radius = Math.min(width, height)/2 - 20;
+      const total = baseline.reduce((a,b)=>a+b,0) || 1;
+      let angle = -Math.PI/2;
+      sourceLabels.forEach((lbl, i) => {
+        const slice = (baseline[i]/total) * Math.PI * 2;
+        ctx.beginPath(); ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, angle, angle + slice); ctx.closePath();
+        ctx.fillStyle = stabTierColor(Z[i]); ctx.fill();
+        ctx.strokeStyle = '#12151b'; ctx.lineWidth = 2; ctx.stroke();
+        if (slice > 0.18) {
+          const mid = angle + slice/2;
+          ctx.fillStyle = '#12151b';
+          ctx.font = '600 12px monospace';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText((baseline[i]*100).toFixed(0) + '%', cx + Math.cos(mid)*radius*0.62, cy + Math.sin(mid)*radius*0.62);
+        }
+        angle += slice;
+      });
+      stabRenderLegend();
+    }
+
+    function stabDrawChart(){
+      if (!stabLastResults) return;
+      if (stabChartMode === 'bar') stabDrawBar(); else stabDrawPie();
+    }
+
+    function initialize() {
+      document.getElementById("defaulttab").click();
+      discoverDatasets();
+      document.getElementById("adcmrecal").disabled = true;
+      document.getElementById("adcrecal").disabled = true;
+      if (document.getElementById("source").value.length > 0 || document.getElementById("target").value.length > 0) {
+        inputHasChanged = true;
+      }
+      document.getElementById("localfiles").value = "";
+      document.getElementById("filteroutput").value = "";
+      if (localStorage.getItem("hubg25-theme") === "light") {
+        document.body.classList.add("light-theme");
+      }
+    }
+
+    function toggleTheme() {
+      const isLight = document.body.classList.toggle("light-theme");
+      localStorage.setItem("hubg25-theme", isLight ? "light" : "dark");
+    }
+  </script>
+</head>
+
+<body>
+  <nav>
+    <a href="https://casperhub.dev/" class="back-btn" title="Back to Hub">
+        <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+            <path d="m15 18-6-6 6-6"></path>
+        </svg>
+    </a>
+    <div id="theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark mode">
+      <span id="theme-label">🌙</span>
+      <div class="toggle-track">
+        <div class="toggle-thumb"></div>
+      </div>
+      <span>☀</span>
+    </div>
+    <header><a href="https://casperhub.dev/" target="_blank" title="HubG25">HubG25<div>Admixture
+          JS</div></a></header>
+    <button class="tablink" id="defaulttab" onclick="openTab(&#39;data&#39;, this)"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582 4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
+        </path>
+      </svg> data</button><!--
+    --><button class="tablink inactive" onclick="openTab(&#39;source_tab&#39;, this)"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
+        </path>
+      </svg> source</button><!--
+    --><button class="tablink inactive" onclick="openTab(&#39;target_tab&#39;, this)"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
+        <circle cx="12" cy="12" r="6" stroke-width="2"></circle>
+        <circle cx="12" cy="12" r="2" stroke-width="2"></circle>
+      </svg> target</button><!--
+    --><button class="tablink inactive" onclick="openTab(&#39;distance&#39;, this);processInput()"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7">
+        </path>
+      </svg> distance</button><!--
+    --><button class="tablink inactive" onclick="openTab(&#39;oracle&#39;, this);processInput()"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z">
+        </path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+        </path>
+      </svg> oracle</button><!--
+    --><button class="tablink inactive" onclick="openTab(&#39;single&#39;, this);processInput()"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+      </svg> single</button><!--
+    --><button class="tablink inactive" onclick="openTab(&#39;multi&#39;, this);processInput()"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
+        </path>
+      </svg> multi</button><!--
+    --><button class="tablink inactive" onclick="openTab('customgen', this);processInput()"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+      </svg> custom gen</button><!--
+    --><button class="tablink inactive" onclick="openTab('stability', this)"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+      </svg> stability</button>
+  </nav>
+  <div id="notification" onclick="clearNotification()"></div>
+  <div class="tab" id="data" style="display: block;">
+    <div class="flexcontainer-data">
+      <div class="panel rightpanel">
+        <label for="localfiles" class="buttons button100">
+          Open files<input type="file" name="Open files" multiple="" id="localfiles" onchange="processFiles(this)">
+        </label>
+        <div style="text-align: center; font-size: 0.7em; margin: 0.5em 0; color: var(--text-2); text-transform: uppercase;">
+          datasets from GitHub (*_dataset.txt)
+        </div>
+        <div id="datasetButtonsDownload"></div>
+<div id="datalist"></div>
+      </div>
+      <div class="panel leftpanel" id="xx">
+        <div style="text-align: center; font-size: 0.7em; margin: 0 0 0.4em 0; color: var(--text-2); text-transform: uppercase;">
+          datasets from GitHub (*_dataset.txt)
+        </div>
+        <div id="datasetButtonsLoad" style="display: flex; gap: 0.4em; margin-bottom: 0.6em; flex-wrap: wrap;"></div>
+
+        <div class="filteropt">
+          <div class="div-100">
+            <input spellcheck="false" class="buttons input-data" id="filter" value="" placeholder="Type to filter" oninput="dataFilter();">
+            <button class="buttons filterReset" onclick="resetFilter()">×</button>
+          </div>
+        </div>
+        <div class="filteropt" style="position: relative;">
+          <button class="buttons" onclick="toggleOptions(&#39;addRep&#39;, this)" style="flex: 0 0 auto; width: 5.5em;">add&nbsp;to:</button>
+          <button class="buttons" onclick="copyTo(&#39;source&#39;, this)" style="flex: 1;">source</button>
+          <button class="buttons" onclick="copyTo(&#39;target&#39;, this)" style="flex: 1;">target</button>
+          <button class="buttons filterReset" onclick="clearDataTransfer()" style="flex: 0 0 auto; margin-left: 0.4em;" title="Clear source, target, and output">×</button>
+        </div>
+        <textarea readonly="" spellcheck="false" class="" id="filteroutput" value="" placeholder="Press &#39;OPEN FILES&#39; button and select one or multiple files to load CSV spreadsheets.
+Lines starting with a comma (headers) will be omitted.
+
+Press &#39;Shift&#39; to focus the search field.
+Start typing to filter the list of samples.
+
+Search is case sensitive.
+
+&#39;Space&#39; - AND
+&#39;!&#39; - negation
+&#39;?&#39; - OR
+&#39;abc def&#39; - abc AND def
+&#39;!abc&#39; - NOT abc
+&#39;abc !def&#39; - abc AND NOT def
+&#39;abc ? def&#39; - abc OR def
+&#39;abc def ? ghi&#39; - (abc AND def) OR (ghi)
+&#39;abc def ? abc ghi&#39; - (abc AND def) OR (abc AND ghi)
+&#39;,abc&#39; - starts with abc
+&#39;abc,&#39; - ends with abc
+&#39;!,abc&#39; - does NOT start with abc
+&#39;!abc,&#39; - does NOT end with abc
+&#39;abc !def,&#39; - abc AND does NOT end with def"></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="tab" id="source_tab" style="display: none; height: calc(100% - 4em);">
+    <div class="st-lookup-bar">
+      <input type="text" id="sourceLookup" class="st-lookup-input" placeholder="Filter / lookup lines in source…" oninput="lookupFilter('source')">
+      <button class="buttons small" onclick="document.getElementById('sourceLookup').value=''; lookupFilter('source');" title="Clear">×</button>
+    </div>
+    <div id="datasetButtonsSource" style="display: flex; gap: 0.4em; padding: 0.4em; background: rgba(0,0,0,0.15); border-radius: 8px 8px 0 0; margin-bottom: -1px; flex-wrap: wrap;"></div>
+
+    <textarea onchange="inputHasChanged = true" class="tabinput" id="source" spellcheck="false" placeholder="Paste data here. Comma-separated values, no header." style="height: calc(100% - 5.5em); border-radius: 0 0 8px 8px; width: 100%;"></textarea>
+  </div>
+  <div class="tab" id="target_tab" style="display: none; height: calc(100% - 4em);">
+    <div class="st-lookup-bar">
+      <input type="text" id="targetLookup" class="st-lookup-input" placeholder="Filter / lookup lines in target…" oninput="lookupFilter('target')">
+      <button class="buttons small" onclick="document.getElementById('targetLookup').value=''; lookupFilter('target');" title="Clear">×</button>
+    </div>
+    <textarea onchange="inputHasChanged = true" class="tabinput" id="target" spellcheck="false" placeholder="Paste data here. Comma-separated values, no header." style="height: calc(100% - 3.2em); border-radius: 0 0 8px 8px; width: 100%;"></textarea>
+  </div>
+  <div class="tab" id="distance" style="display: none;">
+    <div class="flexcontainer">
+      <div class="panel leftpanel" id="distanceoutput"></div>
+      <div class="panel rightpanel">
+        <button class="buttons button100" onclick="clearOutput(this, &#39;confirm&#39;)">clear&nbsp;output</button>
+        <div style="display: none">
+          <button class="buttons button20" onclick="clearOutput(this, &#39;distanceoutput&#39;)">ok</button><!--
+          --><button class="buttons button80" onclick="clearOutput(this, &#39;cancel&#39;)">cancel</button>
+        </div>
+        <button class="buttons button100" onclick="toggleOptions(&#39;distMode&#39;, this)">mode&nbsp;-&nbsp;single</button>
+        <button class="buttons button80" onclick="this.nextElementSibling.focus()">max&nbsp;output&nbsp;number:</button><!--
+        --><input spellcheck="false" class="buttons input20" id="distmaxout" value="25" onblur="validateDistMaxOut(this)">
+        <button class="buttons button100" onclick="toggleOptions(&#39;addGradient&#39;, this)">add&nbsp;gradient&nbsp;-&nbsp;yes</button>
+        <div>
+          <div id="gradopts">
+            <button class="buttons button80" onclick="this.nextElementSibling.focus()">gradient&nbsp;from:</button><!--
+            --><input spellcheck="false" class="buttons input20" id="gradfrom" value="0" onblur="validateGradFromTo(this)">
+            <button class="buttons button80" onclick="this.nextElementSibling.focus()">gradient&nbsp;to:</button><!--
+            --><input spellcheck="false" class="buttons input20" id="gradto" value="0.15" onblur="validateGradFromTo(this)">
+          </div>
+          <div id="gradoptsdiff">
+            <button class="buttons button80" onclick="this.nextElementSibling.focus()">diff&nbsp;gradient&nbsp;from:</button><!--
+            --><input spellcheck="false" class="buttons input20" id="gradfromdiff" value="0" onblur="validateGradFromTo(this)">
+            <button class="buttons button80" onclick="this.nextElementSibling.focus()">diff&nbsp;gradient&nbsp;to:</button><!--
+            --><input spellcheck="false" class="buttons input20" id="gradtodiff" value="0.15" onblur="validateGradFromTo(this)">
+          </div>
+        </div>
+        <button id="runalldist" disabled="" class="buttons button100" onclick="runAllDist()">run&nbsp;all</button>
+        <div id="distancetargets"></div>
+      </div>
+    </div>
+  </div>
+  <div class="tab" id="oracle" style="display: none;">
+    <div class="flexcontainer">
+      <div class="panel leftpanel" id="oracleoutput"></div>
+      <div class="panel rightpanel">
+        <button class="buttons button100" onclick="clearOutput(this, &#39;confirm&#39;)">clear&nbsp;output</button>
+        <div style="display: none">
+          <button class="buttons button20" onclick="clearOutput(this, &#39;oracleoutput&#39;)">ok</button><!--
+          --><button class="buttons button80" onclick="clearOutput(this, &#39;cancel&#39;)">cancel</button>
+        </div>
+        <button class="buttons button100" onclick="toggleOptions(&#39;oracleMode&#39;, this)">mode&nbsp;-&nbsp;2-way</button>
+        <button class="buttons button100" onclick="toggleOptions(&#39;oracleIterationMode&#39;, this)">iteration&nbsp;mode&nbsp;-&nbsp;off</button>
+
+        <button class="buttons button100" onclick="toggleOptions(&#39;oracleFixedPop&#39;, this)">fixed&nbsp;source&nbsp;pop&nbsp;-&nbsp;off</button>
+        <div id="oracleFixedPopOpts" style="display: none;">
+          <button class="buttons button20" onclick="this.nextElementSibling.focus()">pop:</button><!--
+          --><input spellcheck="false" class="buttons input20" id="oracleFixedPopInput" list="oraclesourcelist"><!--
+          --><button class="buttons button20" onclick="this.nextElementSibling.focus()">min%:</button><!--
+          --><input spellcheck="false" class="buttons input10" style="width:10%" id="oracleFixedMin" value="1"><!--
+          --><button class="buttons button20" onclick="this.nextElementSibling.focus()">max%:</button><!--
+          --><input spellcheck="false" class="buttons input10" style="width:10%" id="oracleFixedMax" value="100">
+          <button class="buttons button100" onclick="toggleOptions(&#39;oracleFixedRangemode&#39;, this)">weight&nbsp;limits&nbsp;-&nbsp;constrain</button>
+        </div>
+        <datalist id="oraclesourcelist"></datalist>
+
+        <button class="buttons button80" onclick="this.nextElementSibling.focus()">max&nbsp;output&nbsp;number:</button><!--
+        --><input spellcheck="false" class="buttons input20" id="oraclemaxout" value="25" onblur="validateDistMaxOut(this)">
+        <button class="buttons button100" onclick="toggleOptions(&#39;oracleAddGradient&#39;, this)">add&nbsp;gradient&nbsp;-&nbsp;yes</button>
+        <div>
+          <div id="oraclegradopts">
+            <button class="buttons button80" onclick="this.nextElementSibling.focus()">gradient&nbsp;from:</button><!--
+            --><input spellcheck="false" class="buttons input20" id="oraclegradfrom" value="0" onblur="validateGradFromTo(this)">
+            <button class="buttons button80" onclick="this.nextElementSibling.focus()">gradient&nbsp;to:</button><!--
+            --><input spellcheck="false" class="buttons input20" id="oraclegradto" value="0.15" onblur="validateGradFromTo(this)">
+          </div>
+        </div>
+        <button id="runalloracle" disabled="" class="buttons button100" onclick="runAllOracle()">run&nbsp;all</button>
+        <div id="oracletargets"></div>
+      </div>
+    </div>
+  </div>
+  <div class="tab" id="single" style="display: none;">
+    <div class="flexcontainer">
+      <div class="panel leftpanel" id="singleoutput"></div>
+      <div class="panel rightpanel">
+        <button class="buttons button100" onclick="clearOutput(this, &#39;confirm&#39;)">clear&nbsp;output</button>
+        <div style="display: none"><!--
+          --><button class="buttons button20" onclick="clearOutput(this, &#39;singleoutput&#39;)">ok</button><!--
+          --><button class="buttons button80" onclick="clearOutput(this, &#39;cancel&#39;)">cancel</button><!--
+        --></div><!--
+        --><button class="buttons button100" onclick="toggleOptions(&#39;cyclesX&#39;, this)">cycles&nbsp;-&nbsp;0.25x</button><!--
+        --><button class="buttons button100" onclick="toggleOptions(&#39;nPop&#39;, this)">reduce&nbsp;-&nbsp;no</button><!--
+        --><button class="buttons button100" onclick="toggleOptions(&#39;addDistCol&#39;, this)">add&nbsp;dist&nbsp;col&nbsp;-&nbsp;no</button><!--
+        --><button id="adcrecal" disabled="" class="buttons button100" onclick="toggleOptions(&#39;addDistColRecal&#39;, this)">recalculate&nbsp;-&nbsp;yes</button><!--
+        --><button class="buttons button100" onclick="toggleOptions(&#39;printZeroes&#39;, this)">print
+          zeroes&nbsp;-&nbsp;no</button><!--
+        --><button class="buttons button100" onclick="toggleOptions(&#39;aggregate&#39;, this)">aggregate&nbsp;-&nbsp;yes</button><!--
+        --><button class="buttons button100" onclick="toggleOptions(&#39;addBarChart&#39;, this)">add&nbsp;bar&nbsp;chart&nbsp;-&nbsp;mode&nbsp;1</button><!--
+        --><button id="runallsingle" disabled="" class="buttons button100" onclick="runAllSingle()">run&nbsp;all</button>
+        <div id="singletargets"></div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="tab" id="customgen" style="display: none;">
+    <div class="flexcontainer">
+      <div class="panel leftpanel" id="customgen-main">
+        <div class="cgen-mode-row">
+          <label class="field-label">Mode</label>
+          <select id="cgenMode" onchange="cgenSwitchMode()">
+            <option value="ghost">Ghost Generator</option>
+            <option value="weighted">Weighted Average Mode</option>
+          </select>
+        </div>
+
+        <div class="field" style="margin-top:12px;">
+          <label class="field-label">Custom population name</label>
+          <input type="text" id="cgenName" class="cgen-text-input" placeholder="MyCustomPop" value="Custom">
+        </div>
+
+        <div id="cgenGhostPanel">
+          <p class="hint">Paste G25 lines, set a weight (%), then add or subtract. Additive weights must sum to 100%. Subtractive weights are free (ghost components).</p>
+          <div class="field">
+            <label class="field-label">Paste population G25 line(s)</label>
+            <textarea id="cgenGhostInput" class="cgen-textarea" placeholder="PopName,0.0123,-0.0456,0.0789,..."></textarea>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label class="field-label">Weight %</label>
+              <input type="number" id="cgenGhostWeight" class="cgen-text-input" value="50" step="0.1" min="-200" max="200">
+            </div>
+            <div class="field" style="display:flex;align-items:flex-end;gap:8px;">
+              <button class="buttons" style="flex:1;" onclick="cgenGhostAdd('+')">+ Add</button>
+              <button class="buttons" style="flex:1;" onclick="cgenGhostAdd('-')">− Subtract</button>
+            </div>
+          </div>
+          <div id="cgenGhostList" class="cgen-list"></div>
+          <div class="cgen-sum" id="cgenGhostSum">Additive total: 0% (need 100%)</div>
+          <div class="btn-row" style="margin-top:10px;">
+            <button class="buttons primary" style="flex:1;" onclick="cgenGhostGenerate()">Generate ghost</button>
+            <button class="buttons" style="flex:0 0 auto;" onclick="cgenGhostClear()">Clear</button>
+          </div>
+        </div>
+
+        <div id="cgenWeightPanel" style="display:none;">
+          <p class="hint">Paste one or more G25 lines and click Add. If a label contains n=X, that X is used as its sample size; otherwise n defaults to 1. Output is labelled Name_(n=N) where N is the sum of all n.</p>
+          <div class="field">
+            <label class="field-label">Paste population G25 line(s)</label>
+            <textarea id="cgenWeightInput" class="cgen-textarea" placeholder="PopName_n=12,0.0123,-0.0456,..."></textarea>
+          </div>
+          <button class="buttons button100" style="margin-top:4px;" onclick="cgenWeightAdd()">Add population</button>
+          <div id="cgenWeightList" class="cgen-list"></div>
+          <div class="cgen-sum" id="cgenWeightSum">Total n: 0</div>
+          <div class="btn-row" style="margin-top:10px;">
+            <button class="buttons primary" style="flex:1;" onclick="cgenWeightGenerate()">Generate average</button>
+            <button class="buttons" style="flex:0 0 auto;" onclick="cgenWeightClear()">Clear</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel rightpanel">
+        <h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-2);margin:0 0 10px;">Output</h2>
+        <textarea id="cgenOutput" class="cgen-textarea cgen-output" readonly placeholder="Generated G25 line appears here…"></textarea>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="buttons" style="flex:1;" onclick="cgenCopyOutput()">Copy</button>
+          <button class="buttons" style="flex:1;" onclick="cgenSendTo('source')">→ Source</button>
+          <button class="buttons" style="flex:1;" onclick="cgenSendTo('target')">→ Target</button>
+        </div>
+        <p class="hint" style="margin-top:12px;">Ghost Generator builds linear combinations (including negative / &gt;100% components). Weighted Average Mode builds sample-size–weighted means labelled Name_(n=N).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab" id="stability" style="display: none;">
+    <div class="flexcontainer" style="align-items:stretch;">
+      <div class="panel rightpanel" style="max-width:28em; overflow-y:auto;">
+        <div class="field">
+          <label class="field-label">01 · Target</label>
+          <textarea id="stabTargetInput" class="cgen-textarea" style="min-height:56px;" placeholder="Richelieu_scaled,0.0421,-0.0187,0.0113,..."></textarea>
+          <div class="hint">One line: label, then comma-separated coordinates.</div>
+        </div>
+        <div class="field">
+          <label class="field-label">02 · Sources</label>
+          <textarea id="stabSourcesInput" class="cgen-textarea" style="min-height:120px;" placeholder="Spain_EBA,0.0512,-0.0093,...&#10;Italy_Imperial,0.0388,-0.0241,..."></textarea>
+          <div class="hint">One population per line. At least two. Click Load sources to refresh the checklist.</div>
+          <button class="buttons button100" style="margin-top:8px;" id="stabLoadSourcesBtn" onclick="stabLoadSources()">Load sources</button>
+          <div class="status" id="stabLoadStatus" style="margin-top:6px;font-size:11px;color:var(--text-2);"></div>
+          <div id="stabSourceList" style="display:none; margin-top:10px; max-height:200px; overflow-y:auto; border:1px solid var(--line); border-radius:6px; background:var(--bg-2); padding:4px;"></div>
+        </div>
+        <div class="field">
+          <label class="field-label">03 · Bootstrap replicates</label>
+          <input type="number" id="stabRepsInput" class="cgen-text-input" value="2000" min="200" max="20000" step="100" style="width:120px !important;">
+          <div class="hint">Dimensions resampled with replacement; each replicate is refit.</div>
+        </div>
+        <button class="buttons primary button100" id="stabRunBtn" onclick="stabRun()">Run analysis</button>
+        <div class="status" id="stabRunStatus" style="margin-top:8px;font-size:11px;color:var(--text-2);"></div>
+        <p class="hint" style="margin-top:14px;">Fit is the NNLS solution on all dimensions. SD is the spread across bootstrap resamples. Z = Fit ÷ SD — high Z means load-bearing, low Z means noise.</p>
+      </div>
+      <div class="panel leftpanel" style="overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+          <h2 style="font-size:14px;margin:0;color:var(--text-0);">Stability results</h2>
+          <div id="stabChartToggle" style="display:none; border:1px solid var(--line); border-radius:6px; overflow:hidden;">
+            <button class="buttons small" data-mode="bar" style="margin:0;border-radius:0;border:none;" onclick="stabSetChart('bar')">Bar</button>
+            <button class="buttons small" data-mode="pie" style="margin:0;border-radius:0;border:none;" onclick="stabSetChart('pie')">Pie</button>
+          </div>
+        </div>
+        <div id="stabEmptyState" class="hint" style="border:1px dashed var(--line);border-radius:8px;padding:28px;text-align:center;">
+          Paste a target and sources, load the checklist, then run. <b>Z ≥ 3</b> is stable; <b>1–3</b> provisional; <b>&lt; 1</b> noise.
+        </div>
+        <div id="stabResultsArea" style="display:none;">
+          <div id="stabDistanceStat" style="display:flex;align-items:baseline;gap:10px;background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-family:var(--mono);font-size:12px;"></div>
+          <div style="overflow-x:auto;">
+            <table class="distances" style="width:100%;">
+              <thead>
+                <tr>
+                  <th style="text-align:left;">Source</th>
+                  <th>Fit %</th>
+                  <th>Boot SD</th>
+                  <th>Jack SD</th>
+                  <th>Z (Fit / SD)</th>
+                </tr>
+              </thead>
+              <tbody id="stabResultsBody"></tbody>
+            </table>
+          </div>
+          <div style="background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:16px;margin-top:14px;max-width:720px;">
+            <canvas id="stabChartCanvas" width="672" height="380" style="width:100%;max-height:420px;display:block;"></canvas>
+            <div id="stabChartLegend" class="pie-legend" style="margin-top:12px;max-height:none;"></div>
+          </div>
+          <div class="hint" style="margin-top:10px;display:flex;gap:18px;flex-wrap:wrap;">
+            <span>● Z &lt; 1 — noise</span>
+            <span style="color:#f0a04b;">● 1 ≤ Z &lt; 3 — provisional</span>
+            <span style="color:var(--accent);">● Z ≥ 3 — stable</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab" id="multi" style="display: none;">
+    <div class="flexcontainer-nr">
+      <div>
+        <button class="buttons buttonmulti" onclick="toggleOptions(&#39;cyclesXMulti&#39;, this)">cycles&nbsp;-&nbsp;0.25x</button><br>
+        <button class="buttons buttonmulti" onclick="toggleOptions(&#39;fastModeMulti&#39;, this)">fast&nbsp;mode&nbsp;-&nbsp;no</button>
+      </div>
+      <div>
+        <button class="buttons buttonmulti" onclick="toggleOptions(&#39;addDistColMulti&#39;, this)">add&nbsp;dist&nbsp;col&nbsp;-&nbsp;no</button><br>
+        <button id="adcmrecal" disabled="" class="buttons buttonmulti" onclick="toggleOptions(&#39;addDistColMultiRecal&#39;, this)">recalculate&nbsp;-&nbsp;yes</button>
+      </div>
+      <div>
+        <button class="buttons buttonmulti" onclick="toggleOptions(&#39;printZeroesMulti&#39;, this)">print&nbsp;zeroes&nbsp;-&nbsp;no</button><br>
+        <button class="buttons buttonmulti" onclick="toggleOptions(&#39;aggregateMulti&#39;, this)">aggregate&nbsp;-&nbsp;yes</button>
+      </div>
+      <div>
+        <button class="buttons buttonmulti" onclick="clearOutput(this, &#39;confirm&#39;, &#39;inline-block&#39;)">clear&nbsp;output</button><!--
+            -->
+        <div style="display: none;"><!--
+              --><button class="buttons buttonmulti multiclearok" onclick="clearOutput(this, &#39;multioutput&#39;, &#39;inline-block&#39;)">ok</button><!--
+              --><button class="buttons buttonmulti multiclearcancel" onclick="clearOutput(this, &#39;cancel&#39;, &#39;inline-block&#39;)">cancel</button><!--
+            --></div><br>
+        <button id="runmulti" disabled="" class="buttons buttonmulti" onclick="multiFMC()">run</button>
+      </div>
+    </div>
+    <div id="multioutput"></div>
+  </div>
+  <script>
+    initialize();
+  </script>
+<script type="module" src="./Vahaduo_ Admixture JS 22.05_files/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon="{&quot;version&quot;:&quot;2024.11.0&quot;,&quot;token&quot;:&quot;3b2852297b854c81b5960c786f99dd25&quot;,&quot;r&quot;:1}" crossorigin="anonymous"></script>
+
+
+
+</body></html>
