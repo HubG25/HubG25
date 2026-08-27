@@ -9,11 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
   <link href="./Vahaduo_ Admixture JS 22.05_files/css2" rel="stylesheet">
   <script>if (!sessionStorage.getItem("_swa1") && document.referrer.indexOf(location.protocol + "//" + location.host) !== 0) { fetch("https://counter.dev/track?" + new URLSearchParams({ referrer: "https://www.admixjs.com", screen: screen.width + "x" + screen.height, user: "TheCount", utcoffset: "1" })) }; sessionStorage.setItem("_swa1", "1");</script>
-  <link rel="shortcut icon" href="https://casperhub.dev/favicon.ico">
-  <link rel="icon" type="image/png" sizes="16x16" href="https://casperhub.dev/favicon-16x16.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="https://casperhub.dev/favicon-32x32.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="https://casperhub.dev/apple-touch-icon.png">
-  <link rel="manifest" href="https://casperhub.dev/site.webmanifest">
+  <link rel="icon" href="data:,">
   <style>
 
   :root{
@@ -51,11 +47,11 @@
     background: rgba(25, 29, 37, 0.97);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    padding: 0.35em 0.6em 0;
+    padding: 0.4235em 0.726em 0;
     box-sizing: border-box;
     border-bottom: 1px solid var(--line);
     box-shadow: 0 2px 16px rgba(0,0,0,0.4);
-    display: flex; flex-wrap: wrap; align-items: center; gap: 0.15em;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.1815em;
   }
   header {
     float: none; margin-left: auto; margin-right: 0.6em;
@@ -71,9 +67,9 @@
     color: inherit; font-family: inherit;
   }
   .tablink {
-    display: inline-flex; align-items: center; gap: 0.4em;
-    text-transform: uppercase; padding: 0.6em 1em;
-    font-size: 0.72em; line-height: 1.4;
+    display: inline-flex; align-items: center; gap: 0.484em;
+    text-transform: uppercase; padding: 0.726em 1.21em;
+    font-size: 0.8712em; line-height: 1.4;
     background: transparent; border-radius: 0;
     font-weight: 600; letter-spacing: 0.06em;
     transition: all 0.15s ease;
@@ -266,6 +262,20 @@
     text-align: left; justify-content: flex-start;
   }
   .hint { font-size: 10.5px; color: var(--text-2); line-height: 1.5; margin-top: 6px; }
+  .info-pop {
+    position: relative; display: inline-flex; align-items: center; justify-content: center;
+    width: 13px; height: 13px; margin-left: 4px; border-radius: 50%;
+    background: var(--bg-2); border: 1px solid var(--line); color: var(--text-2);
+    font-size: 9.5px; font-weight: 700; line-height: 1; cursor: help; vertical-align: middle;
+    font-family: var(--sans);
+  }
+  #globalInfoTooltip {
+    display: none; position: fixed; z-index: 9999; width: 230px; max-width: 70vw;
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 10px; font-size: 10.5px; font-weight: 400; line-height: 1.5;
+    color: var(--text-1); text-transform: none; letter-spacing: normal;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4); white-space: normal; pointer-events: none;
+  }
   .row2 { display: flex; gap: 8px; }
   .row2 > * { flex: 1; }
   .btn-row { display: flex; gap: 8px; margin-top: 8px; }
@@ -418,7 +428,8 @@
       dataListId = 0, dataStore = [], dataActive = -1, dataCurrent = false,
       oracleMode = 0, oracleAddGradient = true, oracleIterationMode = false,
       oracleFixedPop = false, oracleFixedRangemode = 1,
-      distMetricMode = 0, notificationTimeout; /* Euclidean only */
+      distMetricMode = 0, notificationTimeout, /* Euclidean only */
+      showPie = true, stabColorScheme = 'tier';
 
     const G25_EIGENVALUES = [
       129.557, 103.13, 14.222, 10.433, 9.471, 7.778, 5.523, 5.325, 4.183, 3.321,
@@ -559,6 +570,10 @@
         case "aggregate":
           toggleOption(aggregate, "aggregate&nbsp;-&nbsp;");
           aggregate = !aggregate;
+          break;
+        case "showPie":
+          toggleOption(showPie, "pie&nbsp;chart&nbsp;-&nbsp;");
+          showPie = !showPie;
           break;
         case "printZeroesMulti":
           toggleOption(printZeroesMulti, "print&nbsp;zeroes&nbsp;-&nbsp;");
@@ -1936,14 +1951,16 @@
     }
 
     
+    const PIE_COLORS = [
+      "#4fb8a6","#5b8def","#f0a04b","#c8564b","#9b7bff","#e06bb0",
+      "#6bcb77","#f7d060","#4d96ff","#ff6b6b","#20c997","#fcc419",
+      "#748ffc","#ff922b","#51cf66","#cc5de8"
+    ];
+
     function buildPieSvg(resultsTable, size) {
       size = size || 200;
       const cx = size / 2, cy = size / 2, r = size * 0.42;
-      const colors = [
-        "#4fb8a6","#5b8def","#f0a04b","#c8564b","#9b7bff","#e06bb0",
-        "#6bcb77","#f7d060","#4d96ff","#ff6b6b","#20c997","#fcc419",
-        "#748ffc","#ff922b","#51cf66","#cc5de8"
-      ];
+      const colors = PIE_COLORS;
       let total = 0;
       const slices = [];
       for (let i = 0; i < resultsTable.length; i++) {
@@ -2027,7 +2044,7 @@
         }
       }
       outputMsg += "</table>";
-      outputMsg += buildPieSvg(resultsTable, 220);
+      if (showPie) outputMsg += buildPieSvg(resultsTable, 220);
       printOutput(outputMsg, "singleoutput");
     }
 
@@ -2912,6 +2929,17 @@
       if (z >= 1) return '#f0a04b';
       return '#6b7385';
     }
+    function stabSliceColor(i, z){
+      return stabColorScheme === 'default' ? PIE_COLORS[i % PIE_COLORS.length] : stabTierColor(z);
+    }
+    function stabSetColorScheme(mode){
+      stabColorScheme = mode;
+      document.querySelectorAll('#stabColorToggle button').forEach(b => {
+        b.style.background = b.dataset.scheme === mode ? 'rgba(79,184,166,0.2)' : '';
+        b.style.color = b.dataset.scheme === mode ? 'var(--accent)' : '';
+      });
+      if (stabLastResults) stabDrawChart();
+    }
 
     function stabRenderResults(){
       document.getElementById('stabEmptyState').style.display = 'none';
@@ -2960,7 +2988,7 @@
     function stabRenderLegend(){
       const { sourceLabels, baseline, bootSD, Z } = stabLastResults;
       document.getElementById('stabChartLegend').innerHTML = sourceLabels.map((lbl, i) =>
-        `<div class="pie-leg-row"><span class="pie-swatch" style="background:${stabTierColor(Z[i])}"></span>` +
+        `<div class="pie-leg-row"><span class="pie-swatch" style="background:${stabSliceColor(i, Z[i])}"></span>` +
         `<span class="pie-leg-pct">${(baseline[i]*100).toFixed(1)}%</span>` +
         `<span class="pie-leg-name">${stabEscape(lbl)} ±${(bootSD[i]*100).toFixed(1)}</span></div>`
       ).join('');
@@ -2988,7 +3016,7 @@
         const cx = padL + slot * i + slot/2;
         const fitPct = baseline[i]*100, sdPct = bootSD[i]*100;
         const yTop = yFor(fitPct), yBase = yFor(0);
-        ctx.fillStyle = stabTierColor(Z[i]);
+        ctx.fillStyle = stabSliceColor(i, Z[i]);
         const bx = cx - barW/2, bh = yBase - yTop, r = Math.min(4, barW/2);
         ctx.beginPath();
         ctx.moveTo(bx, yBase); ctx.lineTo(bx, yTop + r);
@@ -3028,7 +3056,7 @@
         const slice = (baseline[i]/total) * Math.PI * 2;
         ctx.beginPath(); ctx.moveTo(cx, cy);
         ctx.arc(cx, cy, radius, angle, angle + slice); ctx.closePath();
-        ctx.fillStyle = stabTierColor(Z[i]); ctx.fill();
+        ctx.fillStyle = stabSliceColor(i, Z[i]); ctx.fill();
         ctx.strokeStyle = '#12151b'; ctx.lineWidth = 2; ctx.stroke();
         if (slice > 0.18) {
           const mid = angle + slice/2;
@@ -3062,6 +3090,49 @@
       }
     }
 
+    function showInfoTooltip(icon) {
+      const tip = document.getElementById('globalInfoTooltip');
+      const text = icon.getAttribute('data-tooltip');
+      if (!tip || !text) return;
+      tip.innerHTML = text;
+      tip.style.display = 'block';
+      tip.style.left = '0px';
+      tip.style.top = '0px';
+      const iconRect = icon.getBoundingClientRect();
+      const tipRect = tip.getBoundingClientRect();
+      let left = iconRect.left + iconRect.width / 2 - tipRect.width / 2;
+      left = Math.max(8, Math.min(left, window.innerWidth - tipRect.width - 8));
+      let top = iconRect.top - tipRect.height - 8;
+      if (top < 8) top = iconRect.bottom + 8;
+      tip.style.left = left + 'px';
+      tip.style.top = top + 'px';
+    }
+    function hideInfoTooltip() {
+      const tip = document.getElementById('globalInfoTooltip');
+      if (tip) tip.style.display = 'none';
+    }
+    document.addEventListener('mouseover', e => {
+      const icon = e.target.closest('.info-pop');
+      if (icon) showInfoTooltip(icon);
+    });
+    document.addEventListener('mouseout', e => {
+      const icon = e.target.closest('.info-pop');
+      if (icon) hideInfoTooltip();
+    });
+    document.addEventListener('focusin', e => {
+      const icon = e.target.closest('.info-pop');
+      if (icon) showInfoTooltip(icon);
+    });
+    document.addEventListener('focusout', e => {
+      const icon = e.target.closest('.info-pop');
+      if (icon) hideInfoTooltip();
+    });
+    document.addEventListener('click', e => {
+      const icon = e.target.closest('.info-pop');
+      if (icon) { e.stopPropagation(); showInfoTooltip(icon); } else hideInfoTooltip();
+    });
+    window.addEventListener('scroll', hideInfoTooltip, true);
+
     function toggleTheme() {
       const isLight = document.body.classList.toggle("light-theme");
       localStorage.setItem("hubg25-theme", isLight ? "light" : "dark");
@@ -3070,12 +3141,8 @@
 </head>
 
 <body>
+  <div id="globalInfoTooltip"></div>
   <nav>
-    <a href="https://casperhub.dev/" class="back-btn" title="Back to Hub">
-        <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-            <path d="m15 18-6-6 6-6"></path>
-        </svg>
-    </a>
     <div id="theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark mode">
       <span id="theme-label">🌙</span>
       <div class="toggle-track">
@@ -3083,44 +3150,16 @@
       </div>
       <span>☀</span>
     </div>
-    <header><a href="https://casperhub.dev/" target="_blank" title="HubG25">HubG25<div>Admixture
           JS</div></a></header>
-    <button class="tablink" id="defaulttab" onclick="openTab(&#39;data&#39;, this)"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582 4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
-        </path>
-      </svg> data</button><!--
-    --><button class="tablink inactive" onclick="openTab(&#39;source_tab&#39;, this)"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
-        </path>
-      </svg> source</button><!--
-    --><button class="tablink inactive" onclick="openTab(&#39;target_tab&#39;, this)"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
-        <circle cx="12" cy="12" r="6" stroke-width="2"></circle>
-        <circle cx="12" cy="12" r="2" stroke-width="2"></circle>
-      </svg> target</button><!--
-    --><button class="tablink inactive" onclick="openTab(&#39;distance&#39;, this);processInput()"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7">
-        </path>
-      </svg> distance</button><!--
-    --><button class="tablink inactive" onclick="openTab(&#39;oracle&#39;, this);processInput()"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z">
-        </path>
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
-        </path>
-      </svg> oracle</button><!--
-    --><button class="tablink inactive" onclick="openTab(&#39;single&#39;, this);processInput()"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-      </svg> single</button><!--
-    --><button class="tablink inactive" onclick="openTab(&#39;multi&#39;, this);processInput()"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
-        </path>
-      </svg> multi</button><!--
-    --><button class="tablink inactive" onclick="openTab('customgen', this);processInput()"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-      </svg> custom gen</button><!--
-    --><button class="tablink inactive" onclick="openTab('stability', this)"><svg width="1.2em" height="1.2em" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-      </svg> stability</button>
+    <button class="tablink" id="defaulttab" onclick="openTab(&#39;data&#39;, this)">data</button><!--
+    --><button class="tablink inactive" onclick="openTab(&#39;source_tab&#39;, this)">source</button><!--
+    --><button class="tablink inactive" onclick="openTab(&#39;target_tab&#39;, this)">target</button><!--
+    --><button class="tablink inactive" onclick="openTab(&#39;distance&#39;, this);processInput()">distance</button><!--
+    --><button class="tablink inactive" onclick="openTab(&#39;oracle&#39;, this);processInput()">oracle</button><!--
+    --><button class="tablink inactive" onclick="openTab(&#39;single&#39;, this);processInput()">single</button><!--
+    --><button class="tablink inactive" onclick="openTab(&#39;multi&#39;, this);processInput()">multi</button><!--
+    --><button class="tablink inactive" onclick="openTab('customgen', this);processInput()">custom gen</button><!--
+    --><button class="tablink inactive" onclick="openTab('stability', this)">stability</button>
   </nav>
   <div id="notification" onclick="clearNotification()"></div>
   <div class="tab" id="data" style="display: block;">
@@ -3283,6 +3322,7 @@ Search is case sensitive.
           zeroes&nbsp;-&nbsp;no</button><!--
         --><button class="buttons button100" onclick="toggleOptions(&#39;aggregate&#39;, this)">aggregate&nbsp;-&nbsp;yes</button><!--
         --><button class="buttons button100" onclick="toggleOptions(&#39;addBarChart&#39;, this)">add&nbsp;bar&nbsp;chart&nbsp;-&nbsp;mode&nbsp;1</button><!--
+        --><button class="buttons button100" onclick="toggleOptions(&#39;showPie&#39;, this)">pie&nbsp;chart&nbsp;-&nbsp;yes</button><!--
         --><button id="runallsingle" disabled="" class="buttons button100" onclick="runAllSingle()">run&nbsp;all</button>
         <div id="singletargets"></div>
       </div>
@@ -3385,9 +3425,15 @@ Search is case sensitive.
       <div class="panel leftpanel" style="overflow-y:auto;">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
           <h2 style="font-size:14px;margin:0;color:var(--text-0);">Stability results</h2>
-          <div id="stabChartToggle" style="display:none; border:1px solid var(--line); border-radius:6px; overflow:hidden;">
-            <button class="buttons small" data-mode="bar" style="margin:0;border-radius:0;border:none;" onclick="stabSetChart('bar')">Bar</button>
-            <button class="buttons small" data-mode="pie" style="margin:0;border-radius:0;border:none;" onclick="stabSetChart('pie')">Pie</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <div id="stabChartToggle" style="display:none; border:1px solid var(--line); border-radius:6px; overflow:hidden;">
+              <button class="buttons small" data-mode="bar" style="margin:0;border-radius:0;border:none;" onclick="stabSetChart('bar')">Bar</button>
+              <button class="buttons small" data-mode="pie" style="margin:0;border-radius:0;border:none;" onclick="stabSetChart('pie')">Pie</button>
+            </div>
+            <div id="stabColorToggle" style="border:1px solid var(--line); border-radius:6px; overflow:hidden;">
+              <button class="buttons small" data-scheme="tier" style="margin:0;border-radius:0;border:none;background:rgba(79,184,166,0.2);color:var(--accent);" onclick="stabSetColorScheme('tier')" title="Colour by Z-score tier (default)">Tier colours</button>
+              <button class="buttons small" data-scheme="default" style="margin:0;border-radius:0;border:none;" onclick="stabSetColorScheme('default')" title="Colour by source, same palette as Single admixture">Source colours</button>
+            </div>
           </div>
         </div>
         <div id="stabEmptyState" class="hint" style="border:1px dashed var(--line);border-radius:8px;padding:28px;text-align:center;">
@@ -3401,8 +3447,12 @@ Search is case sensitive.
                 <tr>
                   <th style="text-align:left;">Source</th>
                   <th>Fit %</th>
-                  <th>Boot SD</th>
-                  <th>Jack SD</th>
+                  <th>Boot SD
+                    <span class="info-pop" tabindex="0" data-tooltip="Bootstrap SD: the target's G25 dimensions are resampled with replacement (same count, drawn at random) many times; each resample is refit with NNLS, and this is the standard deviation of that source's fitted % across all replicates.">i</span>
+                  </th>
+                  <th>Jack SD
+                    <span class="info-pop" tabindex="0" data-tooltip="Jackknife SD: the fit is recomputed once per dimension with that single dimension left out, then scaled by &radic;((n&minus;1)/n) &times; the variance across those leave-one-out fits &mdash; showing how much any single dimension swings the result.">i</span>
+                  </th>
                   <th>Z (Fit / SD)</th>
                 </tr>
               </thead>
@@ -3421,6 +3471,13 @@ Search is case sensitive.
         </div>
       </div>
     </div>
+    <p class="hint" style="margin:10px 2px 0;max-width:900px;">
+      Disclaimer: this tab's baseline Fit % is the exact NNLS least-squares solution on all G25
+      dimensions. Single and Multi admixture instead use a fast, stochastic Monte&nbsp;Carlo optimizer
+      (their <b>cycles</b> setting) that approximates that same solution rather than solving it
+      directly, so their weights and distance can come out slightly different &mdash; usually by a
+      fraction of a percent. Raising <b>cycles</b> in Single/Multi narrows the gap at the cost of speed.
+    </p>
   </div>
 
   <div class="tab" id="multi" style="display: none;">
