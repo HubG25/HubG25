@@ -1,0 +1,6 @@
+{
+  "name": "HubG25",
+  "description": "G25 tools aggregator portal providing quick access to Genetic Mapper and Calculator tools.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
