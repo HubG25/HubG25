@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- HubG25 Admixture JS -->
-<html><head>
+<!-- saved from url=(0043)https://hubg25.github.io/HubG25/calculator/ -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
   <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-3Y8FEC8DZZ"></script>
+<script async="" src="./HubG25_ Admixture JS_files/js"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
@@ -12,14 +12,14 @@
   gtag('config', 'G-3Y8FEC8DZZ');
 </script>
 
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="HubG25: Admixture JS - Rapid estimation of admixture proportions and calculation of Euclidean distances.">
   <title>HubG25: Admixture JS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com/">
   <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
-  <link href="./Vahaduo_ Admixture JS 22.05_files/css2" rel="stylesheet">
+  <link href="./HubG25_ Admixture JS_files/css2" rel="stylesheet">
   <script>if (!sessionStorage.getItem("_swa1") && document.referrer.indexOf(location.protocol + "//" + location.host) !== 0) { fetch("https://counter.dev/track?" + new URLSearchParams({ referrer: "https://www.admixjs.com", screen: screen.width + "x" + screen.height, user: "TheCount", utcoffset: "1" })) }; sessionStorage.setItem("_swa1", "1");</script>
   <link rel="icon" href="data:,">
   <style>
@@ -3551,7 +3551,7 @@
 </head>
 
 <body>
-  <div id="globalInfoTooltip"></div>
+  <div id="globalInfoTooltip" style="display: none;"></div>
   <nav>
     <div id="theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark mode">
       <span id="theme-label">🌙</span>
@@ -3560,19 +3560,18 @@
       </div>
       <span>☀</span>
     </div>
-    <header><a href="https://casperhub.dev/" target="_blank" title="HubG25">HubG25<div>Admixture
-          JS</div></a></header>
-    <button class="tablink" id="defaulttab" onclick="openTab(&#39;data&#39;, this)">data</button><!--
+    <header><a href="https://casperhub.dev/" target="_blank" title="HubG25">HubG25</a></header>
+    <button class="tablink inactive" id="defaulttab" onclick="openTab(&#39;data&#39;, this)">data</button><!--
     --><button class="tablink inactive" onclick="openTab(&#39;source_tab&#39;, this)">source</button><!--
     --><button class="tablink inactive" onclick="openTab(&#39;target_tab&#39;, this)">target</button><!--
     --><button class="tablink inactive" onclick="openTab(&#39;distance&#39;, this);processInput()">distance</button><!--
     --><button class="tablink inactive" onclick="openTab(&#39;oracle&#39;, this);processInput()">oracle</button><!--
     --><button class="tablink inactive" onclick="openTab(&#39;single&#39;, this);processInput()">single</button><!--
     --><button class="tablink inactive" onclick="openTab(&#39;multi&#39;, this);processInput()">multi</button><!--
-    --><button class="tablink inactive" onclick="openTab('customgen', this);processInput()">custom gen</button><!--
-    --><button class="tablink inactive" onclick="openTab('stability', this)">stability</button><!--
-    --><button class="tablink inactive" onclick="openTab('aadr', this);aadrInit();">AADR 2M explorer</button><!--
-    --><button id="backToMainBtn" onclick="window.location.href='https://hubg25.github.io/HubG25/'">← Back to main screen</button><!--
+    --><button class="tablink inactive" onclick="openTab(&#39;customgen&#39;, this);processInput()">custom gen</button><!--
+    --><button class="tablink" onclick="openTab(&#39;stability&#39;, this)">stability</button><!--
+    --><button class="tablink inactive" onclick="openTab(&#39;aadr&#39;, this);aadrInit();">AADR 2M explorer</button><!--
+    --><button id="backToMainBtn" onclick="window.location.href=&#39;https://hubg25.github.io/HubG25/&#39;">← Back to main screen</button><!--
     --><button id="donateBtn">♥ Donate</button>
   </nav>
   <div id="donateOverlay">
@@ -3608,14 +3607,14 @@
       </div>
     </div>
   </div>
-  <div id="notification" onclick="clearNotification()"></div>
-  <div class="tab" id="data" style="display: block;">
+  <div id="notification" onclick="clearNotification()" style="display: none; background-color: red; color: white;"></div>
+  <div class="tab" id="data" style="display: none;">
     <div class="flexcontainer-data">
       <div class="panel rightpanel">
         <div style="text-align: center; font-size: 0.7em; margin: 0 0 0.5em; color: var(--text-2); text-transform: uppercase;">
           Download datasets
         </div>
-        <div id="datasetButtonsDownload"></div>
+        <div id="datasetButtonsDownload"><button class="buttons button100 button-data" onclick="downloadReadySet(0)">akbari et al. 2026 G25</button><button class="buttons button100 button-data" onclick="downloadReadySet(1)">Global25 PCA ancient</button><button class="buttons button100 button-data" onclick="downloadReadySet(2)">Global25 PCA ancient averages</button><button class="buttons button100 button-data" onclick="downloadReadySet(3)">Global25 PCA modern averages</button><button class="buttons button100 button-data" onclick="downloadReadySet(4)">Global25 PCA modern individuals</button><button class="buttons button100 button-data" onclick="downloadReadySet(5)">Moriopoulos Collection 2026 - Ancients</button><button class="buttons button100 button-data" onclick="downloadReadySet(6)">Moriopoulos Collection 2026 - Moderns</button></div>
         <hr style="margin: 1em 0;">
         <label for="localfiles" class="buttons button100">
           Open files<input type="file" name="Open files" multiple="" id="localfiles" onchange="processFiles(this)">
@@ -3662,19 +3661,19 @@ Search is case sensitive.
   </div>
   <div class="tab" id="source_tab" style="display: none; height: calc(100% - 4em);">
     <div class="st-lookup-bar">
-      <input type="text" id="sourceLookup" class="st-lookup-input" placeholder="Filter / lookup lines in source…" oninput="lookupFilter('source')">
-      <button class="buttons small" onclick="document.getElementById('sourceLookup').value=''; lookupFilter('source');" title="Clear">×</button>
+      <input type="text" id="sourceLookup" class="st-lookup-input" placeholder="Filter / lookup lines in source…" oninput="lookupFilter(&#39;source&#39;)">
+      <button class="buttons small" onclick="document.getElementById(&#39;sourceLookup&#39;).value=&#39;&#39;; lookupFilter(&#39;source&#39;);" title="Clear">×</button>
     </div>
-    <div id="datasetButtonsSource" style="display: flex; gap: 0.4em; padding: 0.4em; background: rgba(0,0,0,0.15); border-radius: 8px 8px 0 0; margin-bottom: -1px; flex-wrap: wrap;"></div>
+    <div id="datasetButtonsSource" style="display: flex; gap: 0.4em; padding: 0.4em; background: rgba(0,0,0,0.15); border-radius: 8px 8px 0 0; margin-bottom: -1px; flex-wrap: wrap;"><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(0)">akbari et al. 2026 G25</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(1)">Global25 PCA ancient</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(2)">Global25 PCA ancient averages</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(3)">Global25 PCA modern averages</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(4)">Global25 PCA modern individuals</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(5)">Moriopoulos Collection 2026 - Ancients</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(6)">Moriopoulos Collection 2026 - Moderns</button></div>
 
-    <textarea onchange="inputHasChanged = true" class="tabinput" id="source" spellcheck="false" placeholder="Paste data here. Comma-separated values, no header." style="height: calc(100% - 5.5em); border-radius: 0 0 8px 8px; width: 100%;"></textarea>
+    <textarea onchange="inputHasChanged = true" class="tabinput" id="source" spellcheck="false" placeholder="Paste data here. Comma-separated values, no header." style="height: calc(100% - 5.5em); border-radius: 0 0 8px 8px; width: 100%;" data-full-value=""></textarea>
   </div>
   <div class="tab" id="target_tab" style="display: none; height: calc(100% - 4em);">
     <div class="st-lookup-bar">
-      <input type="text" id="targetLookup" class="st-lookup-input" placeholder="Filter / lookup lines in target…" oninput="lookupFilter('target')">
-      <button class="buttons small" onclick="document.getElementById('targetLookup').value=''; lookupFilter('target');" title="Clear">×</button>
+      <input type="text" id="targetLookup" class="st-lookup-input" placeholder="Filter / lookup lines in target…" oninput="lookupFilter(&#39;target&#39;)">
+      <button class="buttons small" onclick="document.getElementById(&#39;targetLookup&#39;).value=&#39;&#39;; lookupFilter(&#39;target&#39;);" title="Clear">×</button>
     </div>
-    <textarea onchange="inputHasChanged = true" class="tabinput" id="target" spellcheck="false" placeholder="Paste data here. Comma-separated values, no header." style="height: calc(100% - 3.2em); border-radius: 0 0 8px 8px; width: 100%;"></textarea>
+    <textarea onchange="inputHasChanged = true" class="tabinput" id="target" spellcheck="false" placeholder="Paste data here. Comma-separated values, no header." style="height: calc(100% - 3.2em); border-radius: 0 0 8px 8px; width: 100%;" data-full-value=""></textarea>
   </div>
   <div class="tab" id="distance" style="display: none;">
     <div class="flexcontainer">
@@ -3788,7 +3787,7 @@ Search is case sensitive.
           <input type="text" id="cgenName" class="cgen-text-input" placeholder="MyCustomPop" value="Custom">
         </div>
 
-        <div id="cgenGhostPanel">
+        <div id="cgenGhostPanel" style="display: none;">
           <p class="hint">Paste G25 lines, set a weight (%), then add or subtract. Additive weights must sum to 100%. Subtractive weights are free (ghost components).</p>
           <div class="field">
             <label class="field-label">Paste population G25 line(s)</label>
@@ -3800,8 +3799,8 @@ Search is case sensitive.
               <input type="number" id="cgenGhostWeight" class="cgen-text-input" value="50" step="0.1" min="-200" max="200">
             </div>
             <div class="field" style="display:flex;align-items:flex-end;gap:8px;">
-              <button class="buttons" style="flex:1;" onclick="cgenGhostAdd('+')">+ Add</button>
-              <button class="buttons" style="flex:1;" onclick="cgenGhostAdd('-')">− Subtract</button>
+              <button class="buttons" style="flex:1;" onclick="cgenGhostAdd(&#39;+&#39;)">+ Add</button>
+              <button class="buttons" style="flex:1;" onclick="cgenGhostAdd(&#39;-&#39;)">− Subtract</button>
             </div>
           </div>
           <div id="cgenGhostList" class="cgen-list"></div>
@@ -3812,7 +3811,7 @@ Search is case sensitive.
           </div>
         </div>
 
-        <div id="cgenWeightPanel" style="display:none;">
+        <div id="cgenWeightPanel" style="display: block;">
           <p class="hint">Paste one or more G25 lines and click Add. If a label contains n=X, that X is used as its sample size; otherwise n defaults to 1. Output is labelled Name_(n=N) where N is the sum of all n.</p>
           <div class="field">
             <label class="field-label">Paste population G25 line(s)</label>
@@ -3829,28 +3828,29 @@ Search is case sensitive.
       </div>
       <div class="panel rightpanel">
         <h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-2);margin:0 0 10px;">Output</h2>
-        <textarea id="cgenOutput" class="cgen-textarea cgen-output" readonly placeholder="Generated G25 line appears here…"></textarea>
+        <textarea id="cgenOutput" class="cgen-textarea cgen-output" readonly="" placeholder="Generated G25 line appears here…"></textarea>
         <div class="btn-row" style="margin-top:8px;">
           <button class="buttons" style="flex:1;" onclick="cgenCopyOutput()">Copy</button>
-          <button class="buttons" style="flex:1;" onclick="cgenSendTo('source')">→ Source</button>
-          <button class="buttons" style="flex:1;" onclick="cgenSendTo('target')">→ Target</button>
+          <button class="buttons" style="flex:1;" onclick="cgenSendTo(&#39;source&#39;)">→ Source</button>
+          <button class="buttons" style="flex:1;" onclick="cgenSendTo(&#39;target&#39;)">→ Target</button>
         </div>
         <p class="hint" style="margin-top:12px;">Ghost Generator builds linear combinations (including negative / &gt;100% components). Weighted Average Mode builds sample-size–weighted means labelled Name_(n=N).</p>
       </div>
     </div>
   </div>
 
-  <div class="tab" id="stability" style="display: none;">
+  <div class="tab" id="stability" style="display: block;">
     <div class="flexcontainer" style="align-items:stretch;">
       <div class="panel rightpanel" style="max-width:28em; overflow-y:auto;">
         <div class="field">
           <label class="field-label">01 · Target</label>
-          <textarea id="stabTargetInput" class="cgen-textarea" style="min-height:56px;" placeholder="Richelieu_scaled,0.0421,-0.0187,0.0113,..."></textarea>
+          <textarea id="stabTargetInput" class="cgen-textarea" style="min-height:56px;" placeholder="Target_scaled,0.0421,-0.0187,0.0113,..."></textarea>
           <div class="hint">One line: label, then comma-separated coordinates.</div>
         </div>
         <div class="field">
           <label class="field-label">02 · Sources</label>
-          <textarea id="stabSourcesInput" class="cgen-textarea" style="min-height:120px;" placeholder="Spain_EBA,0.0512,-0.0093,...&#10;Italy_Imperial,0.0388,-0.0241,..."></textarea>
+          <textarea id="stabSourcesInput" class="cgen-textarea" style="min-height:120px;" placeholder="Source_1,0.0512,-0.0093,...
+Source_2,0.0388,-0.0241,..."></textarea>
           <div class="hint">One population per line. At least two. Click Load sources to refresh the checklist.</div>
           <button class="buttons button100" style="margin-top:8px;" id="stabLoadSourcesBtn" onclick="stabLoadSources()">Load sources</button>
           <div class="status" id="stabLoadStatus" style="margin-top:6px;font-size:11px;color:var(--text-2);"></div>
@@ -3870,12 +3870,12 @@ Search is case sensitive.
           <h2 style="font-size:14px;margin:0;color:var(--text-0);">Stability results</h2>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <div id="stabChartToggle" style="display:none; border:1px solid var(--line); border-radius:6px; overflow:hidden;">
-              <button class="buttons small" data-mode="bar" style="margin:0;border-radius:0;border:none;" onclick="stabSetChart('bar')">Bar</button>
-              <button class="buttons small" data-mode="pie" style="margin:0;border-radius:0;border:none;" onclick="stabSetChart('pie')">Pie</button>
+              <button class="buttons small" data-mode="bar" style="margin:0;border-radius:0;border:none;" onclick="stabSetChart(&#39;bar&#39;)">Bar</button>
+              <button class="buttons small" data-mode="pie" style="margin:0;border-radius:0;border:none;" onclick="stabSetChart(&#39;pie&#39;)">Pie</button>
             </div>
             <div id="stabColorToggle" style="border:1px solid var(--line); border-radius:6px; overflow:hidden;">
-              <button class="buttons small" data-scheme="tier" style="margin:0;border-radius:0;border:none;background:rgba(79,184,166,0.2);color:var(--accent);" onclick="stabSetColorScheme('tier')" title="Colour by Z-score tier (default)">Tier colours</button>
-              <button class="buttons small" data-scheme="default" style="margin:0;border-radius:0;border:none;" onclick="stabSetColorScheme('default')" title="Colour by source, same palette as Single admixture">Source colours</button>
+              <button class="buttons small" data-scheme="tier" style="margin:0;border-radius:0;border:none;background:rgba(79,184,166,0.2);color:var(--accent);" onclick="stabSetColorScheme(&#39;tier&#39;)" title="Colour by Z-score tier (default)">Tier colours</button>
+              <button class="buttons small" data-scheme="default" style="margin:0;border-radius:0;border:none;" onclick="stabSetColorScheme(&#39;default&#39;)" title="Colour by source, same palette as Single admixture">Source colours</button>
             </div>
           </div>
         </div>
@@ -3891,10 +3891,10 @@ Search is case sensitive.
                   <th style="text-align:left;">Source</th>
                   <th>Fit %</th>
                   <th>Boot SD
-                    <span class="info-pop" tabindex="0" data-tooltip="Bootstrap SD: the target's G25 dimensions are resampled with replacement (same count, drawn at random) many times; each resample is refit with NNLS, and this is the standard deviation of that source's fitted % across all replicates.">i</span>
+                    <span class="info-pop" tabindex="0" data-tooltip="Bootstrap SD: the target&#39;s G25 dimensions are resampled with replacement (same count, drawn at random) many times; each resample is refit with NNLS, and this is the standard deviation of that source&#39;s fitted % across all replicates.">i</span>
                   </th>
                   <th>Jack SD
-                    <span class="info-pop" tabindex="0" data-tooltip="Jackknife SD: the fit is recomputed once per dimension with that single dimension left out, then scaled by &radic;((n&minus;1)/n) &times; the variance across those leave-one-out fits &mdash; showing how much any single dimension swings the result.">i</span>
+                    <span class="info-pop" tabindex="0" data-tooltip="Jackknife SD: the fit is recomputed once per dimension with that single dimension left out, then scaled by √((n−1)/n) × the variance across those leave-one-out fits — showing how much any single dimension swings the result.">i</span>
                   </th>
                   <th>Z (Fit / SD)</th>
                 </tr>
@@ -3918,7 +3918,7 @@ Search is case sensitive.
       Disclaimer: this tab's baseline Fit % is the exact NNLS least-squares solution on all G25
       dimensions. Single and Multi admixture instead use a fast, stochastic Monte&nbsp;Carlo optimizer
       (their <b>cycles</b> setting) that approximates that same solution rather than solving it
-      directly, so their weights and distance can come out slightly different &mdash; usually by a
+      directly, so their weights and distance can come out slightly different — usually by a
       fraction of a percent. Raising <b>cycles</b> in Single/Multi narrows the gap at the cost of speed.
     </p>
   </div>
@@ -3953,7 +3953,7 @@ Search is case sensitive.
     <div class="aadr-table-wrap" id="aadrTableWrap">
       <div class="aadr-toolbar">
         <input type="text" id="aadrSearch" class="st-lookup-input" placeholder="Search all columns…" oninput="aadrDebouncedFilter()">
-        <button class="buttons small" onclick="document.getElementById('aadrSearch').value=''; aadrGlobalSearch=''; aadrApplyFilters();" title="Clear search">×</button>
+        <button class="buttons small" onclick="document.getElementById(&#39;aadrSearch&#39;).value=&#39;&#39;; aadrGlobalSearch=&#39;&#39;; aadrApplyFilters();" title="Clear search">×</button>
         <button class="buttons" id="aadrCopyAll" onclick="aadrCopyAll()">copy all</button>
       </div>
       <div class="aadr-scroll" id="aadrScroll">
@@ -3975,7 +3975,8 @@ const AADR_ROWS = [["Loschbour.AG",33,"Loschbour",8025,64,"6221-5986 calBCE (720
     initialize();
     setupDonateModal();
   </script>
-<script type="module" src="./Vahaduo_ Admixture JS 22.05_files/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon="{&quot;version&quot;:&quot;2024.11.0&quot;,&quot;token&quot;:&quot;3b2852297b854c81b5960c786f99dd25&quot;,&quot;r&quot;:1}" crossorigin="anonymous"></script>
+<script type="module" src="./HubG25_ Admixture JS_files/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon="{&quot;version&quot;:&quot;2024.11.0&quot;,&quot;token&quot;:&quot;3b2852297b854c81b5960c786f99dd25&quot;,&quot;r&quot;:1}" crossorigin="anonymous"></script>
+
 
 
 
