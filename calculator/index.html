@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <!-- HubG25 Admixture JS -->
-<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<html>
+<head>
+
+  <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3Y8FEC8DZZ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-3Y8FEC8DZZ');
+</script>
+  
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="HubG25: Admixture JS - Rapid estimation of admixture proportions and calculation of Euclidean distances.">
@@ -475,6 +488,44 @@
   .aadr-cell.aadr-id:hover { text-decoration: underline; }
   .aadr-cell.aadr-id.aadr-nog25 { color: var(--text-2); cursor: default; }
   .aadr-cell.aadr-id.aadr-nog25:hover { text-decoration: none; }
+
+  /* ---------- Donate button + modal ---------- */
+  #donateBtn {
+    order: 98;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    background: var(--accent); border: 1px solid var(--accent); color: #0b1613;
+    font-size: 0.75em; font-weight: 700; letter-spacing: 0.02em;
+    padding: 0.6em 1em; border-radius: 6px; cursor: pointer;
+    text-transform: none; margin: 0 0.6em; white-space: nowrap;
+  }
+  #donateBtn:hover { background: #5fc9b6; border-color: #5fc9b6; }
+  #donateOverlay {
+    position: fixed; inset: 0; background: rgba(8,10,14,0.6);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+    display: none; align-items: center; justify-content: center; z-index: 2000;
+  }
+  #donateOverlay.open { display: flex; }
+  #donateModal {
+    width: 360px; max-width: calc(100vw - 32px);
+    background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px;
+    padding: 20px; box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  }
+  #donateModal .donate-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 4px; }
+  #donateModal h3 { margin: 0; font-size: 15px; font-weight: 700; color: var(--text-0); }
+  #donateModal .donate-sub { font-size: 10.5px; color: var(--text-2); line-height: 1.5; margin: 2px 0 16px; }
+  #donateCloseBtn { background: transparent; border: none; color: var(--text-2); font-size: 16px; line-height: 1; padding: 2px 4px; cursor: pointer; }
+  #donateCloseBtn:hover { color: var(--text-0); }
+  .donate-row { margin-bottom: 12px; }
+  .donate-row:last-child { margin-bottom: 0; }
+  .donate-row .donate-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-2); margin-bottom: 5px; font-weight: 700; }
+  .donate-addr-row { display: flex; align-items: center; gap: 6px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; padding: 8px 9px; }
+  .donate-addr-row code { flex: 1; font-family: var(--mono); font-size: 11px; color: var(--text-0); word-break: break-all; line-height: 1.4; }
+  .donate-copy-btn {
+    flex: none; padding: 5px 9px; font-size: 10.5px; border-radius: 6px;
+    border: 1px solid var(--line); background: transparent; color: var(--text-0); cursor: pointer;
+    text-transform: none; font-family: var(--sans);
+  }
+  .donate-copy-btn:hover { background: rgba(79,184,166,0.08); border-color: var(--accent-dim); }
 
 </style>
   <script>
@@ -3445,6 +3496,49 @@
       const isLight = document.body.classList.toggle("light-theme");
       localStorage.setItem("hubg25-theme", isLight ? "light" : "dark");
     }
+
+    function setupDonateModal() {
+      const overlay = document.getElementById('donateOverlay');
+      const openBtn = document.getElementById('donateBtn');
+      const closeBtn = document.getElementById('donateCloseBtn');
+      if (!overlay || !openBtn || !closeBtn) return;
+
+      function openModal() { overlay.classList.add('open'); }
+      function closeModal() { overlay.classList.remove('open'); }
+
+      openBtn.addEventListener('click', openModal);
+      closeBtn.addEventListener('click', closeModal);
+      overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+      document.querySelectorAll('.donate-copy-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const text = document.getElementById(btn.dataset.target).textContent;
+          const done = () => {
+            const original = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = original; }, 1500);
+          };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done).catch(() => donateFallbackCopy(text, done));
+          } else {
+            donateFallbackCopy(text, done);
+          }
+        });
+      });
+
+      function donateFallbackCopy(text, done) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        done();
+      }
+    }
   </script>
 </head>
 
@@ -3469,8 +3563,42 @@
     --><button class="tablink inactive" onclick="openTab(&#39;multi&#39;, this);processInput()">multi</button><!--
     --><button class="tablink inactive" onclick="openTab('customgen', this);processInput()">custom gen</button><!--
     --><button class="tablink inactive" onclick="openTab('stability', this)">stability</button><!--
-    --><button class="tablink inactive" onclick="openTab('aadr', this);aadrInit();">AADR 2M explorer</button>
+    --><button class="tablink inactive" onclick="openTab('aadr', this);aadrInit();">AADR 2M explorer</button><!--
+    --><button id="donateBtn">♥ Donate</button>
   </nav>
+  <div id="donateOverlay">
+    <div id="donateModal" role="dialog" aria-modal="true" aria-labelledby="donateModalTitle">
+      <div class="donate-head">
+        <h3 id="donateModalTitle">Donations</h3>
+        <button id="donateCloseBtn" aria-label="Close">✕</button>
+      </div>
+      <p class="donate-sub">Purely voluntary. No feature is locked behind a paywall.</p>
+
+      <div class="donate-row">
+        <div class="donate-label">BTC</div>
+        <div class="donate-addr-row">
+          <code id="donateAddrBTC">16dWZegWdtBJM21iuZ1UEkkCX4T7kdBqFX</code>
+          <button class="donate-copy-btn" data-target="donateAddrBTC">Copy</button>
+        </div>
+      </div>
+
+      <div class="donate-row">
+        <div class="donate-label">ETH</div>
+        <div class="donate-addr-row">
+          <code id="donateAddrETH">0xc7323e08e3f963af2032b0108d3f367e242f34d8</code>
+          <button class="donate-copy-btn" data-target="donateAddrETH">Copy</button>
+        </div>
+      </div>
+
+      <div class="donate-row">
+        <div class="donate-label">USDT</div>
+        <div class="donate-addr-row">
+          <code id="donateAddrUSDT">TK7oCdQeTN7Nr6Than7gqos4uCQDmYunt9</code>
+          <button class="donate-copy-btn" data-target="donateAddrUSDT">Copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <div id="notification" onclick="clearNotification()"></div>
   <div class="tab" id="data" style="display: block;">
     <div class="flexcontainer-data">
@@ -3836,6 +3964,7 @@ const AADR_ROWS = [["Loschbour.AG",33,"Loschbour",8025,64,"6221-5986 calBCE (720
 </script>
   <script>
     initialize();
+    setupDonateModal();
   </script>
 <script type="module" src="./Vahaduo_ Admixture JS 22.05_files/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon="{&quot;version&quot;:&quot;2024.11.0&quot;,&quot;token&quot;:&quot;3b2852297b854c81b5960c786f99dd25&quot;,&quot;r&quot;:1}" crossorigin="anonymous"></script>
 
