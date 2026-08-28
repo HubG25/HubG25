@@ -4,7 +4,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="HubG25: Admixture JS - Rapid estimation of admixture proportions and calculation of Euclidean distances.">
-  <title>HubG25: Admixture JS</title>
+  <title>HubG25: Admixture</title>
   <link rel="preconnect" href="https://fonts.googleapis.com/">
   <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
   <link href="./Vahaduo_ Admixture JS 22.05_files/css2" rel="stylesheet">
@@ -441,7 +441,7 @@
 
     
     // Datasets are auto-discovered from the same GitHub repo as files named "[Name]_dataset.txt"
-    const DATASET_REPO = "Kerimcanak/VahaduoSpreadsheets";
+    const DATASET_REPO = "HubG25/HubG25/tree/main/calculator/datasets";
     const DATASET_BRANCH = "main";
     const DATASET_API = `https://api.github.com/repos/${DATASET_REPO}/contents/?ref=${DATASET_BRANCH}`;
     const DATASET_RAW = `https://raw.githubusercontent.com/${DATASET_REPO}/${DATASET_BRANCH}/`;
@@ -3150,6 +3150,7 @@
       </div>
       <span>☀</span>
     </div>
+    <header><a href="https://casperhub.dev/" target="_blank" title="HubG25">HubG25<div>Admixture
           JS</div></a></header>
     <button class="tablink" id="defaulttab" onclick="openTab(&#39;data&#39;, this)">data</button><!--
     --><button class="tablink inactive" onclick="openTab(&#39;source_tab&#39;, this)">source</button><!--
@@ -3174,12 +3175,7 @@
         <div id="datasetButtonsDownload"></div>
 <div id="datalist"></div>
       </div>
-      <div class="panel leftpanel" id="xx">
-        <div style="text-align: center; font-size: 0.7em; margin: 0 0 0.4em 0; color: var(--text-2); text-transform: uppercase;">
-          datasets from GitHub (*_dataset.txt)
-        </div>
-        <div id="datasetButtonsLoad" style="display: flex; gap: 0.4em; margin-bottom: 0.6em; flex-wrap: wrap;"></div>
-
+      <div class="panel leftpanel" id="xx" style="display: flex; flex-direction: column; height: 100%;">
         <div class="filteropt">
           <div class="div-100">
             <input spellcheck="false" class="buttons input-data" id="filter" value="" placeholder="Type to filter" oninput="dataFilter();">
@@ -3213,7 +3209,7 @@ Search is case sensitive.
 &#39;abc,&#39; - ends with abc
 &#39;!,abc&#39; - does NOT start with abc
 &#39;!abc,&#39; - does NOT end with abc
-&#39;abc !def,&#39; - abc AND does NOT end with def"></textarea>
+&#39;abc !def,&#39; - abc AND does NOT end with def" style="flex: 1 1 auto; min-height: 0; border-radius: 0 0 8px 8px; width: 100%;"></textarea>
       </div>
     </div>
   </div>
@@ -3402,12 +3398,12 @@ Search is case sensitive.
       <div class="panel rightpanel" style="max-width:28em; overflow-y:auto;">
         <div class="field">
           <label class="field-label">01 · Target</label>
-          <textarea id="stabTargetInput" class="cgen-textarea" style="min-height:56px;" placeholder="Richelieu_scaled,0.0421,-0.0187,0.0113,..."></textarea>
+          <textarea id="stabTargetInput" class="cgen-textarea" style="min-height:56px;" placeholder="Target_scaled,0.0421,-0.0187,0.0113,..."></textarea>
           <div class="hint">One line: label, then comma-separated coordinates.</div>
         </div>
         <div class="field">
           <label class="field-label">02 · Sources</label>
-          <textarea id="stabSourcesInput" class="cgen-textarea" style="min-height:120px;" placeholder="Spain_EBA,0.0512,-0.0093,...&#10;Italy_Imperial,0.0388,-0.0241,..."></textarea>
+          <textarea id="stabSourcesInput" class="cgen-textarea" style="min-height:120px;" placeholder="Source_1,0.0512,-0.0093,...&#10;Source_2,0.0388,-0.0241,..."></textarea>
           <div class="hint">One population per line. At least two. Click Load sources to refresh the checklist.</div>
           <button class="buttons button100" style="margin-top:8px;" id="stabLoadSourcesBtn" onclick="stabLoadSources()">Load sources</button>
           <div class="status" id="stabLoadStatus" style="margin-top:6px;font-size:11px;color:var(--text-2);"></div>
