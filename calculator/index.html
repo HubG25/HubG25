@@ -323,6 +323,57 @@
     font-family: var(--mono) !important;
   }
   .cgen-row.is-sub .cgen-name { color: var(--text-1); }
+  .adcbox {
+    box-sizing: border-box; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--bg-2); padding: 0.5em 0.7em 0.6em; margin-bottom: 0.45em;
+    transition: border-color .12s;
+  }
+  .adcbox:hover, .adcbox:focus-within { border-color: var(--accent-dim); }
+  .adchead {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 0.72em; text-transform: uppercase; letter-spacing: 0.04em;
+    font-weight: 600; color: var(--text-0); margin-bottom: 0.4em;
+  }
+  .adcval {
+    font-family: var(--mono); color: var(--accent);
+    text-transform: none; letter-spacing: 0;
+  }
+  .adcval.off { color: var(--text-2); }
+  .adcrange {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; margin: 0; height: 13px; background: transparent; cursor: pointer;
+  }
+  .adcrange:focus { outline: none; }
+  .adcrange::-webkit-slider-runnable-track {
+    height: 4px; border-radius: 2px; background: var(--line);
+  }
+  .adcrange::-moz-range-track {
+    height: 4px; border-radius: 2px; background: var(--line);
+  }
+  .adcrange::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; margin-top: -4.5px;
+    width: 13px; height: 13px; border-radius: 50%;
+    background: var(--accent); border: none;
+  }
+  .adcrange::-moz-range-thumb {
+    width: 13px; height: 13px; border-radius: 50%;
+    background: var(--accent); border: none;
+  }
+  .adcrange:hover::-webkit-slider-thumb, .adcrange:focus::-webkit-slider-thumb { background: #5fc9b6; }
+  .adcrange:hover::-moz-range-thumb, .adcrange:focus::-moz-range-thumb { background: #5fc9b6; }
+  .adcticklabels {
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: 0.62em; color: var(--text-2);
+    margin-top: 0.15em; user-select: none;
+  }
+  .adcbox-multi {
+    display: inline-block; vertical-align: top;
+    min-width: 13em; margin: 0.4em 0 0 0.4em;
+  }
+  .kbdhint {
+    float: right; opacity: 0.5; font-size: 0.82em;
+    font-weight: normal; letter-spacing: 0;
+  }
   .cgen-suggest-wrap { position: relative; }
   .cgen-suggest {
     display: none; position: absolute; left: 0; right: 0; top: 100%;
@@ -574,7 +625,7 @@
       printZeroes = false, aggregate = true, addBarChart = 1,
       printZeroesMulti = false, aggregateMulti = true,
       fastModeMulti = false, cyclesX = 1, cyclesXMulti = 1,
-      addDistCol = 1, addDistColMulti = 1, addDistColRecal = true,
+      addDistCol = 0, addDistColMulti = 0, addDistColRecal = true,
       addDistColMultiRecal = true, distMode = 0, twoDistClicked = false,
       twoDistFirst = false, nPop = 0, af = false, addRep = false,
       dataListId = 0, dataStore = [], dataActive = -1, dataCurrent = false,
@@ -706,7 +757,35 @@
       }
     }
 
-    function toggleOptions(option, elmnt) {
+    /* ---- add dist col sliders ----
+       addDistCol / addDistColMulti now store the multiplier itself, with 0 meaning off.
+       fastMonteCarlo still works on the internal 8x scale, so the value is multiplied
+       by 8 on the way in (0.25x -> 2, 1x -> 8, exactly as the old toggle produced). */
+    const ADC_SCALE = 8;
+
+    function adcFormat(v) {
+      return v > 0 ? (Math.round(v * 100) / 100) + "x" : "no";
+    }
+
+    function setDistCol(which, val) {
+      let v = parseFloat(val);
+      if (isNaN(v) || v < 0) v = 0;
+      const isMulti = which === "multi";
+      if (isMulti) addDistColMulti = v; else addDistCol = v;
+      const out = document.getElementById(isMulti ? "adcmVal" : "adcVal");
+      if (out) {
+        out.textContent = adcFormat(v);
+        out.classList.toggle("off", v === 0);
+      }
+      const recal = document.getElementById(isMulti ? "adcmrecal" : "adcrecal");
+      if (recal) recal.disabled = (v === 0);
+    }
+
+    const NPOP_MIN = 2, NPOP_MAX = 10;
+    // Shown inside the reduce button so the shift-click direction is always visible.
+    const NPOP_HINT = '<span class="kbdhint">▲&nbsp;click&nbsp;&nbsp;▼&nbsp;shift</span>';
+
+    function toggleOptions(option, elmnt, ev) {
       let msg;
       function toggleOption(currentValue, msg) {
         if (currentValue) {
@@ -748,26 +827,6 @@
           cyclesXMulti == 16 ? cyclesXMulti = 1 : cyclesXMulti *= 2;
           elmnt.innerHTML = "cycles&nbsp;-&nbsp;" + cyclesXMulti / 4 + "x";
           break;
-        case "addDistCol":
-          addDistCol == 16 ? addDistCol = 1 : addDistCol *= 2;
-          msg = (addDistCol == 1 ? "no" : addDistCol / 8 + "x");
-          elmnt.innerHTML = "add&nbsp;dist&nbsp;col&nbsp;-&nbsp;" + msg;
-          if (addDistCol == 1) {
-            document.getElementById("adcrecal").disabled = true;
-          } else if (addDistCol == 2) {
-            document.getElementById("adcrecal").disabled = false;
-          }
-          break;
-        case "addDistColMulti":
-          addDistColMulti == 16 ? addDistColMulti = 1 : addDistColMulti *= 2;
-          msg = (addDistColMulti == 1 ? "no" : addDistColMulti / 8 + "x");
-          elmnt.innerHTML = "add&nbsp;dist&nbsp;col&nbsp;-&nbsp;" + msg;
-          if (addDistColMulti == 1) {
-            document.getElementById("adcmrecal").disabled = true;
-          } else if (addDistColMulti == 2) {
-            document.getElementById("adcmrecal").disabled = false;
-          }
-          break;
         case "addDistColRecal":
           toggleOption(addDistColRecal, "recalculate&nbsp;-&nbsp;");
           addDistColRecal = !addDistColRecal;
@@ -777,10 +836,15 @@
           addDistColMultiRecal = !addDistColMultiRecal;
           break;
         case "nPop":
-          nPop == 0 ? nPop = 3 : nPop += 1;
-          if (nPop > 5) nPop = 0;
-          msg = (nPop == 0 ? "no" : nPop + " populations");
-          elmnt.innerHTML = "reduce&nbsp;-&nbsp;" + msg;
+          if (ev && ev.shiftKey) {                 // shift-click steps back down
+            nPop == 0 ? nPop = NPOP_MAX : nPop -= 1;
+            if (nPop < NPOP_MIN) nPop = 0;
+          } else {
+            nPop == 0 ? nPop = NPOP_MIN : nPop += 1;
+            if (nPop > NPOP_MAX) nPop = 0;
+          }
+          msg = (nPop == 0 ? "no" : nPop + "&nbsp;populations");
+          elmnt.innerHTML = "reduce&nbsp;-&nbsp;" + msg + NPOP_HINT;
           break;
         case "addBarChart":
           addBarChart == 2 ? addBarChart = 0 : addBarChart += 1;
@@ -1648,8 +1712,12 @@
       initResultsTable.sort(function (a, b) {
         return b[1] - a[1];
       });
+      // initResultsTable is sorted by score descending. Keep everything above the
+      // 0.02 cut, but never fewer than nPop candidates: otherwise a strict cut can
+      // shrink the pool below the requested n and silently return a smaller model.
+      const minKeep = Math.max(nPop, 1);
       for (let item in initResultsTable) {
-        if (Number(initResultsTable[item][1]) > 0.02) {
+        if (Number(initResultsTable[item][1]) > 0.02 || newSource.length < minKeep) {
           newSource.push(source[Number(initResultsTable[item][0])]);
           newNamesArr.push(namesArr[Number(initResultsTable[item][0])]);
         } else {
@@ -1670,11 +1738,15 @@
         }
       }
       storeSet = currentSet;
+      // 35 slots leaves ~3 slots per population at n=10, too coarse to rank candidate
+      // sets apart. Scale the search grid with n above the original 5-way ceiling;
+      // n <= 5 keeps the historical value so existing results are unchanged.
+      const searchSlots = nPop > 5 ? nPop * 10 : 35;
       let runs = [];
       for (let i = 0, n = 30 + popNum; i < n; i++) {
         currentSet = storeSet.slice();
         currentResult = runFMC(currentSet);
-        slots = 35;
+        slots = searchSlots;
         for (let i = 0, n = Math.ceil(popNum); i < n; i++) {
           for (let j = 0; j < nPop; j++) {
             nextSet = currentSet.slice();
@@ -1909,7 +1981,7 @@
         minDistance, maxDistance, currentDistance, names = "",
         namesDiv, namesCompStyle, namesOffset;
       const results = Array(targetNum),
-        addDC = (addDistColMulti == 1 ? false : addDistColMulti);
+        addDC = (addDistColMulti > 0 ? addDistColMulti * ADC_SCALE : false);
       slots = (fastModeMulti ? 125 : 500);
       for (i = 0; i < targetNum; i++) {
         source = prepareSource(slots);
@@ -1988,7 +2060,7 @@
       namesCompStyle = window.getComputedStyle(namesDiv);
       namesOffset = Number((namesCompStyle.getPropertyValue("width")).replace(/px/, "")) / Number((namesCompStyle.getPropertyValue("height")).replace(/px/, "")) / 1.4142 + 2;
       document.body.removeChild(namesDiv);
-      outputMsg = '<div class="multitablewrapper"><table><tr style="height:' + namesOffset + 'em"><td data-columnid="0" class="multiheader"><div><span onclick="sortByColumn(this, false)">Target</span></div></td><td data-columnid="1" class="multiheader" colspan="2"><div><span onclick="sortByColumn(this)">Distance' + (addDistColMulti == 1 ? "" : " | ADC: " + addDistColMulti / 8 + "x" + (addDistColMultiRecal ? " RC" : "")) + '</span></div></td>';
+      outputMsg = '<div class="multitablewrapper"><table><tr style="height:' + namesOffset + 'em"><td data-columnid="0" class="multiheader"><div><span onclick="sortByColumn(this, false)">Target</span></div></td><td data-columnid="1" class="multiheader" colspan="2"><div><span onclick="sortByColumn(this)">Distance' + (addDistColMulti > 0 ? " | ADC: " + adcFormat(addDistColMulti) + (addDistColMultiRecal ? " RC" : "") : "") + '</span></div></td>';
       for (i = 0; i < sourceNumLocal; i++) {
         outputMsg += '<td data-columnid="' + (i + 2) + '" class="multisources"><div><span onclick="sortByColumn(this)">' + resultsTable[i][0] + '</span></div></td>';
       }
@@ -2212,7 +2284,7 @@
       const slots = 500,
         target = prepareTarget(targetId, slots),
         source = prepareSource(slots),
-        addDC = (addDistCol == 1 ? false : addDistCol);
+        addDC = (addDistCol > 0 ? addDistCol * ADC_SCALE : false);
       if (nPop == 0) {
         result = fastMonteCarlo(target, source, targetId, slots, cyclesX, addDC, addDistColRecal, sourceNum);
         resultsTable = Array(sourceNumLocal)
@@ -2239,7 +2311,7 @@
       });
       time = Date.now() - time;
       outputMsg = "<table><tr><th colspan='" + (addBarChart == 2 ? 3 : 2) + "' class='singleheader'>Target: " + targetArray[targetId][0] + "<br/>";
-      outputMsg += "Distance: " + (100 * result.distance).toFixed(4) + "% / " + result.distance.toFixed(8) + (nPop == 0 ? "" : " | R" + nPop + "P") + (addDistCol == 1 ? "" : " | ADC: " + addDistCol / 8 + "x" + (addDistColRecal ? " RC" : "")) + "<br/>";
+      outputMsg += "Distance: " + (100 * result.distance).toFixed(4) + "% / " + result.distance.toFixed(8) + (nPop == 0 ? "" : " | R" + nPop + "P") + (addDistCol > 0 ? " | ADC: " + adcFormat(addDistCol) + (addDistColRecal ? " RC" : "") : "") + "<br/>";
       outputMsg += '<div class="singleinfo nonselectable" data-nonselectable="' + (nPop == 0 ? 'Sources: ' + sourceNumLocal + ' | Cycles: ' + Math.ceil(sourceNumLocal * cyclesX / 4) : 'Populations: ' + result.pops + ' | Iterations: ' + result.iter) + ' | Time: ' + time / 1000 + '&nbsp;s' + '"></div>';
       outputMsg += "</th></tr>";
       for (i = 0, n = resultsTable.length; i < n; i++) {
@@ -3499,8 +3571,8 @@
     function initialize() {
       document.getElementById("defaulttab").click();
       discoverDatasets();
-      document.getElementById("adcmrecal").disabled = true;
-      document.getElementById("adcrecal").disabled = true;
+      setDistCol("single", document.getElementById("adcSlider").value);
+      setDistCol("multi", document.getElementById("adcmSlider").value);
       if (document.getElementById("source").value.length > 0 || document.getElementById("target").value.length > 0) {
         inputHasChanged = true;
       }
@@ -4113,8 +4185,14 @@ Search is case sensitive.
           --><button class="buttons button80" onclick="clearOutput(this, &#39;cancel&#39;)">cancel</button><!--
         --></div><!--
         --><button class="buttons button100" onclick="toggleOptions(&#39;cyclesX&#39;, this)">cycles&nbsp;-&nbsp;0.25x</button><!--
-        --><button class="buttons button100" onclick="toggleOptions(&#39;nPop&#39;, this)">reduce&nbsp;-&nbsp;no</button><!--
-        --><button class="buttons button100" onclick="toggleOptions(&#39;addDistCol&#39;, this)">add&nbsp;dist&nbsp;col&nbsp;-&nbsp;no</button><!--
+        --><button class="buttons button100" title="Forced n-way admixture. Click cycles up 2→3…→10 then off; shift-click steps back down." onclick="toggleOptions(&#39;nPop&#39;, this, event)">reduce&nbsp;-&nbsp;no<span class="kbdhint">▲&nbsp;click&nbsp;&nbsp;▼&nbsp;shift</span></button><!--
+        --><div class="adcbox" title="Adds an extra synthetic dimension equal to this multiplier times the raw distance to the target, penalising far-off sources. 0 = off. Marked stops match the old 0.25x / 0.5x / 1x / 2x steps.">
+          <div class="adchead"><span>add&nbsp;dist&nbsp;col</span><span class="adcval off" id="adcVal">no</span></div>
+          <input type="range" class="adcrange" id="adcSlider" min="0" max="4" step="0.05" value="0"
+                 list="adcticks" aria-label="Add distance column multiplier"
+                 oninput="setDistCol(&#39;single&#39;, this.value)">
+          <div class="adcticklabels"><span>off</span><span>1x</span><span>2x</span><span>3x</span><span>4x</span></div>
+        </div><!--
         --><button id="adcrecal" disabled="" class="buttons button100" onclick="toggleOptions(&#39;addDistColRecal&#39;, this)">recalculate&nbsp;-&nbsp;yes</button><!--
         --><button class="buttons button100" onclick="toggleOptions(&#39;printZeroes&#39;, this)">print
           zeroes&nbsp;-&nbsp;no</button><!--
@@ -4286,6 +4364,11 @@ Source_2,0.0388,-0.0241,..."></textarea>
     </p>
   </div>
 
+  <datalist id="adcticks">
+    <option value="0"></option><option value="0.25"></option><option value="0.5"></option>
+    <option value="1"></option><option value="2"></option><option value="4"></option>
+  </datalist>
+
   <div class="tab" id="multi" style="display: none;">
     <div class="flexcontainer-nr">
       <div>
@@ -4293,7 +4376,13 @@ Source_2,0.0388,-0.0241,..."></textarea>
         <button class="buttons buttonmulti" onclick="toggleOptions(&#39;fastModeMulti&#39;, this)">fast&nbsp;mode&nbsp;-&nbsp;no</button>
       </div>
       <div>
-        <button class="buttons buttonmulti" onclick="toggleOptions(&#39;addDistColMulti&#39;, this)">add&nbsp;dist&nbsp;col&nbsp;-&nbsp;no</button><br>
+        <div class="adcbox adcbox-multi" title="Adds an extra synthetic dimension equal to this multiplier times the raw distance to the target, penalising far-off sources. 0 = off. Marked stops match the old 0.25x / 0.5x / 1x / 2x steps.">
+          <div class="adchead"><span>add&nbsp;dist&nbsp;col</span><span class="adcval off" id="adcmVal">no</span></div>
+          <input type="range" class="adcrange" id="adcmSlider" min="0" max="4" step="0.05" value="0"
+                 list="adcticks" aria-label="Add distance column multiplier"
+                 oninput="setDistCol(&#39;multi&#39;, this.value)">
+          <div class="adcticklabels"><span>off</span><span>1x</span><span>2x</span><span>3x</span><span>4x</span></div>
+        </div><br>
         <button id="adcmrecal" disabled="" class="buttons buttonmulti" onclick="toggleOptions(&#39;addDistColMultiRecal&#39;, this)">recalculate&nbsp;-&nbsp;yes</button>
       </div>
       <div>
