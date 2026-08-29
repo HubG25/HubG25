@@ -761,7 +761,7 @@
        addDistCol / addDistColMulti now store the multiplier itself, with 0 meaning off.
        fastMonteCarlo still works on the internal 8x scale, so the value is multiplied
        by 8 on the way in (0.25x -> 2, 1x -> 8, exactly as the old toggle produced). */
-    const ADC_SCALE = 8;
+    const ADC_SCALE = 8, ADC_MAX = 2;
 
     function adcFormat(v) {
       return v > 0 ? (Math.round(v * 100) / 100) + "x" : "no";
@@ -770,6 +770,7 @@
     function setDistCol(which, val) {
       let v = parseFloat(val);
       if (isNaN(v) || v < 0) v = 0;
+      if (v > ADC_MAX) v = ADC_MAX;
       const isMulti = which === "multi";
       if (isMulti) addDistColMulti = v; else addDistCol = v;
       const out = document.getElementById(isMulti ? "adcmVal" : "adcVal");
@@ -4188,10 +4189,10 @@ Search is case sensitive.
         --><button class="buttons button100" title="Forced n-way admixture. Click cycles up 2→3…→10 then off; shift-click steps back down." onclick="toggleOptions(&#39;nPop&#39;, this, event)">reduce&nbsp;-&nbsp;no<span class="kbdhint">▲&nbsp;click&nbsp;&nbsp;▼&nbsp;shift</span></button><!--
         --><div class="adcbox" title="Adds an extra synthetic dimension equal to this multiplier times the raw distance to the target, penalising far-off sources. 0 = off. Marked stops match the old 0.25x / 0.5x / 1x / 2x steps.">
           <div class="adchead"><span>add&nbsp;dist&nbsp;col</span><span class="adcval off" id="adcVal">no</span></div>
-          <input type="range" class="adcrange" id="adcSlider" min="0" max="4" step="0.05" value="0"
+          <input type="range" class="adcrange" id="adcSlider" min="0" max="2" step="0.05" value="0"
                  list="adcticks" aria-label="Add distance column multiplier"
                  oninput="setDistCol(&#39;single&#39;, this.value)">
-          <div class="adcticklabels"><span>off</span><span>1x</span><span>2x</span><span>3x</span><span>4x</span></div>
+          <div class="adcticklabels"><span>off</span><span>0.5x</span><span>1x</span><span>1.5x</span><span>2x</span></div>
         </div><!--
         --><button id="adcrecal" disabled="" class="buttons button100" onclick="toggleOptions(&#39;addDistColRecal&#39;, this)">recalculate&nbsp;-&nbsp;yes</button><!--
         --><button class="buttons button100" onclick="toggleOptions(&#39;printZeroes&#39;, this)">print
@@ -4366,7 +4367,7 @@ Source_2,0.0388,-0.0241,..."></textarea>
 
   <datalist id="adcticks">
     <option value="0"></option><option value="0.25"></option><option value="0.5"></option>
-    <option value="1"></option><option value="2"></option><option value="4"></option>
+    <option value="1"></option><option value="2"></option>
   </datalist>
 
   <div class="tab" id="multi" style="display: none;">
@@ -4378,10 +4379,10 @@ Source_2,0.0388,-0.0241,..."></textarea>
       <div>
         <div class="adcbox adcbox-multi" title="Adds an extra synthetic dimension equal to this multiplier times the raw distance to the target, penalising far-off sources. 0 = off. Marked stops match the old 0.25x / 0.5x / 1x / 2x steps.">
           <div class="adchead"><span>add&nbsp;dist&nbsp;col</span><span class="adcval off" id="adcmVal">no</span></div>
-          <input type="range" class="adcrange" id="adcmSlider" min="0" max="4" step="0.05" value="0"
+          <input type="range" class="adcrange" id="adcmSlider" min="0" max="2" step="0.05" value="0"
                  list="adcticks" aria-label="Add distance column multiplier"
                  oninput="setDistCol(&#39;multi&#39;, this.value)">
-          <div class="adcticklabels"><span>off</span><span>1x</span><span>2x</span><span>3x</span><span>4x</span></div>
+          <div class="adcticklabels"><span>off</span><span>0.5x</span><span>1x</span><span>1.5x</span><span>2x</span></div>
         </div><br>
         <button id="adcmrecal" disabled="" class="buttons buttonmulti" onclick="toggleOptions(&#39;addDistColMultiRecal&#39;, this)">recalculate&nbsp;-&nbsp;yes</button>
       </div>
