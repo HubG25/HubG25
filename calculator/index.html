@@ -311,6 +311,38 @@
     margin-top: 8px; font-size: 12px; font-weight: 600;
     font-family: var(--mono); color: var(--text-1);
   }
+  .cgen-sign {
+    width: 2.1em; min-width: 2.1em; text-align: center;
+    font-size: 0.85em !important; line-height: 1;
+    margin: 0 !important; padding: 0.3em 0 !important;
+  }
+  .cgen-w {
+    width: 68px; text-align: center; padding: 4px 6px; font-size: 12px;
+    background: var(--bg-2) !important; border: 1px solid var(--line) !important;
+    border-radius: 6px !important; color: var(--text-0) !important;
+    font-family: var(--mono) !important;
+  }
+  .cgen-row.is-sub .cgen-name { color: var(--text-1); }
+  .cgen-suggest-wrap { position: relative; }
+  .cgen-suggest {
+    display: none; position: absolute; left: 0; right: 0; top: 100%;
+    z-index: 60; margin-top: 4px; max-height: 260px; overflow-y: auto;
+    background: var(--bg-2); border: 1px solid var(--line);
+    border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  }
+  .cgen-suggest-item {
+    padding: 7px 10px; font-size: 12px; color: var(--text-0);
+    cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    border-bottom: 1px solid var(--line);
+  }
+  .cgen-suggest-item:last-child { border-bottom: none; }
+  .cgen-suggest-item:hover, .cgen-suggest-item.active {
+    background: rgba(79,184,166,0.14); color: var(--accent);
+  }
+  .cgen-suggest-more {
+    padding: 6px 10px; font-size: 11px; color: var(--text-2);
+    font-family: var(--mono); border-top: 1px solid var(--line);
+  }
   #theme-toggle {
     display: flex; align-items: center; gap: 0.45em;
     margin: 0.35em 0.5em 0 0; cursor: pointer; user-select: none;
@@ -2659,19 +2691,180 @@
       const mode = document.getElementById("cgenMode").value;
       document.getElementById("cgenGhostPanel").style.display = mode === "ghost" ? "block" : "none";
       document.getElementById("cgenWeightPanel").style.display = mode === "weighted" ? "block" : "none";
+      if (mode === "ghost") cgenRefreshPopList();
+    }
+
+    function cgenEsc(str) {
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    /* ---- Population filler: same idea as Oracle's "fixed source pop" datalist ---- */
+    let cgenPopIndex = new Map(); // lowercased name -> {name, vec}
+
+    function cgenRawTextarea(id) {
+      // lookupFilter() may be showing a filtered subset; fall back to the full text.
+      const ta = document.getElementById(id);
+      if (!ta) return "";
+      if (ta.dataset.filtering && ta.dataset.fullValue !== undefined) return ta.dataset.fullValue;
+      return ta.value;
+    }
+
+    function cgenCollectPops() {
+      cgenPopIndex = new Map();
+      const names = [];
+      for (const id of ["source", "target"]) {
+        for (const p of cgenParseLines(cgenRawTextarea(id))) {
+          const key = p.name.toLowerCase();
+          if (!cgenPopIndex.has(key)) { cgenPopIndex.set(key, p); names.push(p.name); }
+        }
+      }
+      return names;
+    }
+
+    let cgenPopSig = null;
+
+    // Re-parse SOURCE/TARGET only when their contents actually changed.
+    function cgenEnsurePops(force) {
+      const sig = cgenRawTextarea("source").length + "/" + cgenRawTextarea("target").length;
+      if (force || sig !== cgenPopSig || !cgenPopIndex.size) {
+        cgenCollectPops();
+        cgenPopSig = sig;
+      }
+      return cgenPopIndex;
+    }
+
+    function cgenRefreshPopList() {
+      cgenEnsurePops(true);
+      const hint = document.getElementById("cgenGhostLookupHint");
+      if (hint) {
+        hint.textContent = cgenPopIndex.size
+          ? cgenPopIndex.size + " populations available from SOURCE + TARGET \u2014 start typing to fetch one."
+          : "No data loaded \u2014 paste coordinates in the Data tab, or paste a G25 line here.";
+      }
+    }
+
+    function cgenLookupPop(str) {
+      const q = String(str || "").trim();
+      if (!q) return null;
+      if (cgenPopIndex.has(q.toLowerCase())) return cgenPopIndex.get(q.toLowerCase());
+      const ql = q.toLowerCase();
+      let hit = null;
+      for (const [k, v] of cgenPopIndex) {
+        if (k.indexOf(ql) >= 0) { if (hit) return null; hit = v; }
+      }
+      return hit;
+    }
+
+    /* ---- live "fetch from source" dropdown ---- */
+    const CGEN_SUGGEST_MAX = 200;
+    let cgenSuggestHits = [];
+    let cgenSuggestIdx = -1;
+
+    function cgenHideSuggest() {
+      const box = document.getElementById("cgenGhostSuggest");
+      if (box) { box.style.display = "none"; box.innerHTML = ""; }
+      cgenSuggestHits = []; cgenSuggestIdx = -1;
+    }
+
+    function cgenGhostSuggest() {
+      const el = document.getElementById("cgenGhostInput");
+      const box = document.getElementById("cgenGhostSuggest");
+      if (!el || !box) return;
+      const q = el.value.trim();
+      // A pasted coordinate line contains commas — nothing to look up.
+      if (!q || q.indexOf(",") >= 0) { cgenHideSuggest(); return; }
+
+      cgenEnsurePops(false);
+      const ql = q.toLowerCase();
+      const starts = [], contains = [];
+      for (const [k, v] of cgenPopIndex) {
+        const at = k.indexOf(ql);
+        if (at === 0) starts.push(v);
+        else if (at > 0) contains.push(v);
+        if (starts.length >= CGEN_SUGGEST_MAX) break;
+      }
+      const hits = starts.concat(contains).slice(0, CGEN_SUGGEST_MAX);
+      cgenSuggestHits = hits;
+      cgenSuggestIdx = -1;
+
+      if (!hits.length) {
+        box.innerHTML = '<div class="cgen-suggest-more">No population matches \u201c' + cgenEsc(q) + '\u201d</div>';
+        box.style.display = "block";
+        return;
+      }
+      let html = hits.map((p, i) =>
+        '<div class="cgen-suggest-item" data-i="' + i + '" onmousedown="cgenPickSuggest(event,' + i + ')" title="' +
+        cgenEsc(p.name) + '">' + cgenEsc(p.name) + "</div>").join("");
+      if (hits.length >= CGEN_SUGGEST_MAX) {
+        html += '<div class="cgen-suggest-more">showing first ' + CGEN_SUGGEST_MAX + " \u2014 keep typing to narrow</div>";
+      }
+      box.innerHTML = html;
+      box.style.display = "block";
+    }
+
+    function cgenPickSuggest(ev, i) {
+      if (ev) ev.preventDefault();           // fires before blur, so focus stays put
+      const p = cgenSuggestHits[i];
+      if (!p) return;
+      const el = document.getElementById("cgenGhostInput");
+      el.value = p.name;
+      cgenHideSuggest();                     // no el.focus(): it would re-trigger onfocus
+    }
+
+    function cgenSuggestMove(delta) {
+      const box = document.getElementById("cgenGhostSuggest");
+      if (!cgenSuggestHits.length || !box || box.style.display === "none") return;
+      cgenSuggestIdx = (cgenSuggestIdx + delta + cgenSuggestHits.length) % cgenSuggestHits.length;
+      const items = box.querySelectorAll(".cgen-suggest-item");
+      items.forEach(n => n.classList.remove("active"));
+      const cur = items[cgenSuggestIdx];
+      if (cur) {
+        cur.classList.add("active");
+        if (cur.scrollIntoView) { try { cur.scrollIntoView({ block: "nearest" }); } catch (e) {} }
+      }
+    }
+
+    function cgenGhostKey(ev) {
+      const box = document.getElementById("cgenGhostSuggest");
+      const open = box && box.style.display === "block" && cgenSuggestHits.length;
+      if (ev.key === "ArrowDown") { ev.preventDefault(); cgenSuggestMove(1); return; }
+      if (ev.key === "ArrowUp")   { ev.preventDefault(); cgenSuggestMove(-1); return; }
+      if (ev.key === "Escape")    { cgenHideSuggest(); return; }
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        if (open && cgenSuggestIdx >= 0) { cgenPickSuggest(null, cgenSuggestIdx); return; }
+        cgenGhostAdd("+");
+      }
     }
 
     function cgenGhostAdd(sign) {
-      const raw = document.getElementById("cgenGhostInput").value;
       const weight = parseFloat(document.getElementById("cgenGhostWeight").value);
       if (isNaN(weight)) { showNotification("Invalid weight.", 1); return; }
-      const parsed = cgenParseLines(raw);
-      if (!parsed.length) { showNotification("No valid G25 lines found.", 1); return; }
-      const s = sign === "-" ? -1 : 1;
-      for (const p of parsed) {
-        cgenGhostRows.push({ name: p.name, vec: p.vec, weight: Math.abs(weight), sign: s });
+      const el = document.getElementById("cgenGhostInput");
+      const raw = el.value.trim();
+      if (!raw) { showNotification("Type a population name or paste coordinates first.", 1); return; }
+
+      let pick = null;
+      if (raw.indexOf(",") >= 0) {
+        const parsed = cgenParseLines(raw);
+        if (!parsed.length) { showNotification("Not a valid G25 line.", 1); return; }
+        pick = parsed[0];
+      } else {
+        cgenEnsurePops(true);
+        pick = cgenLookupPop(raw);
+        if (!pick) {
+          showNotification("\u201c" + raw + "\u201d did not match exactly one population in SOURCE/TARGET.", 1);
+          return;
+        }
       }
-      document.getElementById("cgenGhostInput").value = "";
+
+      cgenGhostRows.push({
+        name: pick.name, vec: pick.vec,
+        weight: Math.abs(weight), sign: sign === "-" ? -1 : 1
+      });
+      el.value = "";
+      cgenHideSuggest();
       cgenRenderGhost();
     }
 
@@ -2680,19 +2873,57 @@
       cgenRenderGhost();
     }
 
+    function cgenGhostToggleSign(i) {
+      cgenGhostRows[i].sign = cgenGhostRows[i].sign > 0 ? -1 : 1;
+      cgenRenderGhost();
+    }
+
+    function cgenGhostSetWeight(i, val) {
+      const w = parseFloat(val);
+      if (!isNaN(w)) cgenGhostRows[i].weight = Math.abs(w);
+      cgenUpdateGhostSum(); // don't re-render: keeps focus in the field being typed in
+    }
+
+    function cgenGhostTotals() {
+      let addSum = 0, subSum = 0;
+      for (const r of cgenGhostRows) {
+        if (r.sign > 0) addSum += r.weight; else subSum += r.weight;
+      }
+      return { addSum: addSum, subSum: subSum, denom: (100 - subSum) / 100 };
+    }
+
+    function cgenUpdateGhostSum() {
+      const t = cgenGhostTotals();
+      const sumEl = document.getElementById("cgenGhostSum");
+      const addOk = Math.abs(t.addSum - 100) < 0.05;
+      const subOk = t.subSum < 100 - 1e-9;
+      let txt = "Additive: " + t.addSum.toFixed(2) + "%" + (addOk ? " \u2713" : " (need 100%)");
+      if (t.subSum > 0) {
+        txt += "   \u00b7   Subtractive: " + t.subSum.toFixed(2) + "%";
+        txt += subOk ? "   \u00b7   rescale \u00d7" + (1 / t.denom).toFixed(4)
+                     : "   \u00b7   must be < 100%";
+      }
+      sumEl.textContent = txt;
+      sumEl.style.color = (addOk && subOk) ? "var(--accent)" : "var(--danger)";
+    }
+
     function cgenRenderGhost() {
       const list = document.getElementById("cgenGhostList");
-      let addSum = 0;
       list.innerHTML = cgenGhostRows.map((r, i) => {
-        if (r.sign > 0) addSum += r.weight;
-        const signLabel = r.sign > 0 ? "+" : "−";
+        const signLabel = r.sign > 0 ? "+" : "\u2212";
         const color = r.sign > 0 ? "var(--accent)" : "var(--danger)";
-        return `<div class="cgen-row"><span style="color:${color};font-weight:700;width:1.2em;">${signLabel}</span><span class="cgen-name">${r.name}</span><span class="cgen-meta">${r.weight}%</span><button class="buttons small" onclick="cgenGhostRemove(${i})">✕</button></div>`;
+        const nm = cgenEsc(r.name);
+        return '<div class="cgen-row' + (r.sign > 0 ? '' : ' is-sub') + '">'
+          + '<button class="buttons small cgen-sign" title="Switch between add and subtract" '
+          + 'style="color:' + color + ';font-weight:700;" onclick="cgenGhostToggleSign(' + i + ')">' + signLabel + '</button>'
+          + '<span class="cgen-name" title="' + nm + '">' + nm + '</span>'
+          + '<input type="number" class="cgen-w" step="0.1" min="0" max="500" value="' + r.weight + '" '
+          + 'oninput="cgenGhostSetWeight(' + i + ', this.value)" title="Weight %">'
+          + '<span class="cgen-meta">%</span>'
+          + '<button class="buttons small" onclick="cgenGhostRemove(' + i + ')" title="Remove">\u2715</button>'
+          + '</div>';
       }).join("");
-      const sumEl = document.getElementById("cgenGhostSum");
-      const ok = Math.abs(addSum - 100) < 0.05;
-      sumEl.textContent = `Additive total: ${addSum.toFixed(2)}% ${ok ? "✓" : "(need 100%)"}`;
-      sumEl.style.color = ok ? "var(--accent)" : "var(--danger)";
+      cgenUpdateGhostSum();
     }
 
     function cgenGhostClear() {
@@ -2703,10 +2934,13 @@
 
     function cgenGhostGenerate() {
       if (!cgenGhostRows.length) { showNotification("Add at least one population.", 1); return; }
-      let addSum = 0;
-      for (const r of cgenGhostRows) if (r.sign > 0) addSum += r.weight;
-      if (Math.abs(addSum - 100) > 0.05) {
-        showNotification("Additive weights must sum to 100% (currently " + addSum.toFixed(2) + "%).", 1);
+      const t = cgenGhostTotals();
+      if (Math.abs(t.addSum - 100) > 0.05) {
+        showNotification("Additive weights must sum to 100% (currently " + t.addSum.toFixed(2) + "%).", 1);
+        return;
+      }
+      if (t.subSum >= 100 - 1e-9) {
+        showNotification("Subtractive weights must total less than 100% (currently " + t.subSum.toFixed(2) + "%).", 1);
         return;
       }
       const dim = cgenGhostRows[0].vec.length;
@@ -2718,6 +2952,11 @@
         const w = (r.sign * r.weight) / 100;
         for (let d = 0; d < dim; d++) out[d] += w * r.vec[d];
       }
+      // Renormalise: the mixture coefficients must sum to 1, otherwise subtracting
+      // pulls the result toward the PCA origin instead of yielding the residual
+      // population.  ghost = (target - sum(sub_j * S_j)) / (1 - sum(sub_j)).
+      for (let d = 0; d < dim; d++) out[d] /= t.denom;
+
       let name = (document.getElementById("cgenName").value || "Custom").trim().replace(/,/g, "_");
       const line = name + "," + out.map(v => (Math.abs(v) < 1e-12 ? 0 : v).toFixed(8)).join(",");
       document.getElementById("cgenOutput").value = line;
@@ -2832,6 +3071,12 @@
       const filtered = lines.filter(l => l.toLowerCase().indexOf(ql) >= 0);
       ta.value = filtered.join("\n");
     }
+    // Custom Gen defaults to Ghost Generator on first load
+    document.addEventListener("DOMContentLoaded", function() {
+      const modeSel = document.getElementById("cgenMode");
+      if (modeSel) { modeSel.value = "ghost"; cgenSwitchMode(); cgenRenderGhost(); }
+    });
+
     // Clear filter state when user edits source/target directly after filtering
     document.addEventListener("DOMContentLoaded", function() {
       ["source", "target"].forEach(id => {
@@ -3679,7 +3924,7 @@
     --><button class="tablink inactive" onclick="openTab(&#39;oracle&#39;, this);processInput()">oracle</button><!--
     --><button class="tablink inactive" onclick="openTab(&#39;single&#39;, this);processInput()">single</button><!--
     --><button class="tablink inactive" onclick="openTab(&#39;multi&#39;, this);processInput()">multi</button><!--
-    --><button class="tablink inactive" onclick="openTab(&#39;customgen&#39;, this);processInput()">custom gen</button><!--
+    --><button class="tablink inactive" onclick="openTab(&#39;customgen&#39;, this);processInput();cgenRefreshPopList()">custom gen</button><!--
     --><button class="tablink" onclick="openTab(&#39;stability&#39;, this)">stability</button><!--
     --><button class="tablink inactive" onclick="openTab(&#39;aadr&#39;, this);aadrInit();">AADR v66 Explorer</button><!--
     --><button id="backToMainBtn" onclick="window.location.href=&#39;https://hubg25.github.io/HubG25/&#39;">← Back to main screen</button><!--
@@ -3888,21 +4133,28 @@ Search is case sensitive.
         <div class="cgen-mode-row">
           <label class="field-label">Mode</label>
           <select id="cgenMode" onchange="cgenSwitchMode()">
-            <option value="ghost">Ghost Generator</option>
+            <option value="ghost" selected="selected">Ghost Generator</option>
             <option value="weighted">Weighted Average Mode</option>
           </select>
         </div>
 
         <div class="field" style="margin-top:12px;">
           <label class="field-label">Custom population name</label>
-          <input type="text" id="cgenName" class="cgen-text-input" placeholder="MyCustomPop" value="Custom">
+          <input type="text" id="cgenName" class="cgen-text-input" placeholder="MyCustomPop">
         </div>
 
-        <div id="cgenGhostPanel" style="display: none;">
-          <p class="hint">Paste G25 lines, set a weight (%), then add or subtract. Additive weights must sum to 100%. Subtractive weights are free (ghost components).</p>
-          <div class="field">
-            <label class="field-label">Paste population G25 line(s)</label>
-            <textarea id="cgenGhostInput" class="cgen-textarea" placeholder="PopName,0.0123,-0.0456,0.0789,..."></textarea>
+        <div id="cgenGhostPanel" style="display: block;">
+          <p class="hint">Type a population name to fetch its coordinates from your SOURCE/TARGET data, or paste a G25 line. Set a weight (%), then add or subtract — one population at a time. Additive weights must sum to 100%; subtractive weights must total under 100%. Weights and signs stay editable in the list below.</p>
+          <div class="field cgen-suggest-wrap">
+            <label class="field-label">Population</label>
+            <input type="text" id="cgenGhostInput" class="cgen-text-input" spellcheck="false" autocomplete="off"
+                   placeholder="Fetch from Source or paste coordinates..."
+                   onfocus="cgenRefreshPopList(); cgenGhostSuggest();"
+                   oninput="cgenGhostSuggest()"
+                   onkeydown="cgenGhostKey(event)"
+                   onblur="setTimeout(cgenHideSuggest, 150)">
+            <div class="cgen-suggest" id="cgenGhostSuggest"></div>
+            <div class="hint" id="cgenGhostLookupHint" style="margin-top:4px;"></div>
           </div>
           <div class="row2">
             <div class="field">
@@ -3922,7 +4174,7 @@ Search is case sensitive.
           </div>
         </div>
 
-        <div id="cgenWeightPanel" style="display: block;">
+        <div id="cgenWeightPanel" style="display: none;">
           <p class="hint">Paste one or more G25 lines and click Add. If a label contains n=X, that X is used as its sample size; otherwise n defaults to 1. Output is labelled Name_(n=N) where N is the sum of all n.</p>
           <div class="field">
             <label class="field-label">Paste population G25 line(s)</label>
@@ -3945,7 +4197,7 @@ Search is case sensitive.
           <button class="buttons" style="flex:1;" onclick="cgenSendTo(&#39;source&#39;)">→ Source</button>
           <button class="buttons" style="flex:1;" onclick="cgenSendTo(&#39;target&#39;)">→ Target</button>
         </div>
-        <p class="hint" style="margin-top:12px;">Ghost Generator builds linear combinations (including negative / &gt;100% components). Weighted Average Mode builds sample-size–weighted means labelled Name_(n=N).</p>
+        <p class="hint" style="margin-top:12px;">Ghost Generator solves T = Σ(addᵢ·Aᵢ) − Σ(subⱼ·Sⱼ) for the residual population, rescaling by 1/(1 − Σsubⱼ) so the mixture coefficients sum to 1. Weighted Average Mode builds sample-size–weighted means labelled Name_(n=N).</p>
       </div>
     </div>
   </div>
