@@ -427,7 +427,7 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
 
-  /* ---------- AADR 2M explorer ---------- */
+  /* ---------- AADR v66 Explorer ---------- */
   .aadr-table-wrap {
     display: flex; flex-direction: column; height: 100%;
     border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
@@ -3309,7 +3309,7 @@
     });
     window.addEventListener('scroll', hideInfoTooltip, true);
 
-    // ---------- AADR 2M explorer ----------
+    // ---------- AADR v66 Explorer ----------
     let aadrInitialized = false;
     let aadrFilteredIndices = [];
     let aadrColFilters = [];
@@ -3391,6 +3391,61 @@
       aadrFilterTimer = setTimeout(aadrApplyFilters, 180);
     }
 
+    // Helper: normalize string by replacing commas with spaces for matching
+    function aadrNormalizeForMatch(str) {
+      return String(str).replace(/,/g, ' ');
+    }
+
+    // Helper: check if a value matches a single filter term (supporting negation and comma-agnostic matching)
+    function aadrMatchesTerm(value, term) {
+      if (!term) return true;
+      
+      const normalizedValue = aadrNormalizeForMatch(value).toLowerCase();
+      
+      // Handle negation: term starts with "-"
+      if (term.startsWith('-')) {
+        const negatedTerm = aadrNormalizeForMatch(term.substring(1)).trim();
+        return normalizedValue.indexOf(negatedTerm) === -1; // Return true if does NOT contain
+      }
+      
+      // Positive match: term is normalized and checked for inclusion
+      const normalizedTerm = aadrNormalizeForMatch(term).trim();
+      return normalizedValue.indexOf(normalizedTerm) !== -1;
+    }
+
+    // Helper: check if a value matches all filter terms (supporting multi-term OR logic with negation)
+    function aadrMatchesFilter(value, filterStr) {
+      if (!filterStr) return true;
+      if (value === null || value === undefined) return false;
+      
+      // Split by comma to get individual terms
+      const terms = filterStr.split(',').map(t => t.trim()).filter(t => t);
+      if (terms.length === 0) return true;
+      
+      // Separate positive and negative terms
+      const positiveTerms = terms.filter(t => !t.startsWith('-'));
+      const negativeTerms = terms.filter(t => t.startsWith('-'));
+      
+      // Check positive terms: at least ONE must match (OR logic)
+      if (positiveTerms.length > 0) {
+        let positiveMatch = false;
+        for (const term of positiveTerms) {
+          if (aadrMatchesTerm(value, term)) {
+            positiveMatch = true;
+            break;
+          }
+        }
+        if (!positiveMatch) return false;
+      }
+      
+      // Check negative terms: ALL must NOT match (NOT logic for all)
+      for (const term of negativeTerms) {
+        if (!aadrMatchesTerm(value, term)) return false; // Term should exclude
+      }
+      
+      return true;
+    }
+
     function aadrApplyFilters() {
       const search = aadrGlobalSearch;
       const filters = aadrColFilters;
@@ -3416,7 +3471,7 @@
             const range = AADR_RANGE_KEYS.has(AADR_COLUMNS[c].key) ? aadrParseRange(f) : null;
             if (range) {
               if (v === null || v === undefined || v < range.min || v > range.max) { ok = false; break; }
-            } else if (v === null || v === undefined || String(v).toLowerCase().indexOf(f) === -1) {
+            } else if (!aadrMatchesFilter(v, f)) {
               ok = false; break;
             }
           }
@@ -3431,6 +3486,7 @@
       aadrScrollEl.scrollTop = 0;
       aadrRenderWindow();
     }
+
 
     function aadrCompare(a, b, colIdx, colType, dir) {
       const va = AADR_ROWS[a][colIdx], vb = AADR_ROWS[b][colIdx];
@@ -3625,7 +3681,7 @@
     --><button class="tablink inactive" onclick="openTab(&#39;multi&#39;, this);processInput()">multi</button><!--
     --><button class="tablink inactive" onclick="openTab(&#39;customgen&#39;, this);processInput()">custom gen</button><!--
     --><button class="tablink" onclick="openTab(&#39;stability&#39;, this)">stability</button><!--
-    --><button class="tablink inactive" onclick="openTab(&#39;aadr&#39;, this);aadrInit();">AADR 2M explorer</button><!--
+    --><button class="tablink inactive" onclick="openTab(&#39;aadr&#39;, this);aadrInit();">AADR v66 Explorer</button><!--
     --><button id="backToMainBtn" onclick="window.location.href=&#39;https://hubg25.github.io/HubG25/&#39;">← Back to main screen</button><!--
     --><button id="donateBtn">♥ Donate</button>
   </nav>
