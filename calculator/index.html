@@ -243,6 +243,10 @@
   .singleleftcolumn { text-align: right; padding-right: 0.7em; }
   .singlerightcolumn { text-align: left; width: 100%; }
   .multitablewrapper { overflow-x: auto; padding-bottom: 1em; }
+  .distcopy {
+    display: block; width: 100%; box-sizing: border-box;
+    margin: 0.3em 0 0; font-size: 0.72em; text-transform: none;
+  }
   .mfilter {
     display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
     margin: 0 0 0.55em; font-size: 0.72em; color: var(--text-1);
@@ -1238,6 +1242,7 @@
       });
 
       output += '<table class="distances"><tr><th colspan="2" style="text-align:left">Distance&nbsp;' + comparisonType + ' &uarr;' + '<br>A:&nbsp;' + targetA[0] + "<br>B:&nbsp;" + targetB[0] + "<br>C:&nbsp;&#8628;</th>";
+      const upperNames = [];
       for (i = 0; i < distMaxOut; i++) {
         distanceCurrent = distances[resultsNum - 1 - i][1];
         if (distanceCurrent >= comparisonValue) {
@@ -1246,11 +1251,13 @@
           }
           break;
         }
+        upperNames.push(distances[resultsNum - 1 - i][0]);
         output += "<tr><td" + upperDecorator(distanceCurrent) + "</td><td>" + distances[resultsNum - 1 - i][0] + "</td></tr>";
       }
-      output += "</table><br>";
+      output += "</table>" + distCopyButtonHtml(upperNames) + "<br>";
 
       output += '<table class="distances"><tr><th colspan="2" style="text-align:left">Distance&nbsp;' + comparisonType + ' &darr;' + '<br>A:&nbsp;' + targetA[0] + "<br>B:&nbsp;" + targetB[0] + "<br>C:&nbsp;&#8628;</th>";
+      const lowerNames = [];
       for (i = 0; i < distMaxOut; i++) {
         distanceCurrent = distances[i][1];
         if (distanceCurrent <= comparisonValue) {
@@ -1259,9 +1266,10 @@
           }
           break;
         }
+        lowerNames.push(distances[i][0]);
         output += "<tr><td" + lowerDecorator(distanceCurrent) + "</td><td>" + distances[i][0] + "</td></tr>";
       }
-      output += "</table>";
+      output += "</table>" + distCopyButtonHtml(lowerNames);
 
       printOutput(output, "distanceoutput");
     }
@@ -1297,8 +1305,10 @@
         gradStyle2 = ', 70%, 48%)"';
       }
       output += '<table class="distances"><tr><th>Distance&nbsp;to:</th><th>' + target[0] + "</th>";
+      const listedNames = [];
       for (i = 0; i < distMaxOut; i++) {
         distanceCurrent = distances[i][1];
+        listedNames.push(distances[i][0]);
         if (addGradient) {
           if (distanceCurrent < gradFrom) {
             gradHSL = 120;
@@ -1310,7 +1320,7 @@
         }
         output += "<tr><td" + gradStyle1 + gradHSL + gradStyle2 + ">" + distanceCurrent.toFixed(8) + "</td><td>" + distances[i][0] + "</td></tr>";
       }
-      output += "</table>";
+      output += "</table>" + distCopyButtonHtml(listedNames);
       printOutput(output, "distanceoutput");
     }
 
@@ -2123,6 +2133,53 @@
       outputMsg += '</table><button onclick="resetSorting(this)" class="buttons buttonmulti">reset&nbsp;sorting</button><button onclick= "copyTable(this)" class="buttons buttonmulti">copy&nbsp;table&nbsp;as&nbsp;CSV</button><button onclick= "copyTable(this, true)" class="buttons buttonmulti">copy&nbsp;table&nbsp;as&nbsp;TSV</button><button onclick="multiCopyShown(this)" class="buttons buttonmulti">copy&nbsp;shown&nbsp;coordinates</button></div></div>';
       printOutput(outputMsg, "multioutput");
       multiApplyFilters(document.querySelector('.multiblock[data-runid="' + runId + '"]'));
+    }
+
+    /* ---------- Distance tab: copy the listed source coordinates ---------- */
+    let distTableSeq = 0;
+    const DIST_TABLES = {};
+
+    // Snapshot the SOURCE lines exactly as the user pasted them, keyed by name,
+    // so a copied coordinate is byte-identical rather than a reparsed round-trip.
+    function distRawSourceLines() {
+      const raw = {};
+      for (const line of cgenRawTextarea('source').split('\n')) {
+        const t = line.trim();
+        const c = t.indexOf(',');
+        if (c > 0) raw[t.slice(0, c).trim()] = t;
+      }
+      return raw;
+    }
+
+    function distRegisterList(names) {
+      const id = ++distTableSeq;
+      const raw = distRawSourceLines();
+      const byName = {};
+      for (let i = 0; i < sourceArray.length; i++) byName[sourceArray[i][0]] = sourceArray[i];
+      DIST_TABLES[id] = names.map(function (n) {
+        if (raw[n]) return raw[n];
+        const a = byName[n];
+        return a ? a[0] + ',' + a.slice(1).join(',') : null;
+      }).filter(function (l) { return l; });
+      return id;
+    }
+
+    // Rendered under a results table; copies exactly the rows that table shows,
+    // in the order they are listed.
+    function distCopyButtonHtml(names) {
+      if (!names.length) return '';
+      const id = distRegisterList(names);
+      const n = DIST_TABLES[id].length;
+      if (!n) return '';
+      return '<button class="buttons distcopy" data-distid="' + id +
+        '" onclick="distCopyAll(this)">copy&nbsp;all&nbsp;coordinates&nbsp;(' + n + ')</button>';
+    }
+
+    function distCopyAll(btn) {
+      const lines = DIST_TABLES[btn.dataset.distid];
+      if (!lines || !lines.length) { showNotification('No coordinates available for this list.', 1); return; }
+      explCopyText(lines.join('\n'), 'Copied ' + lines.length.toLocaleString() +
+        ' coordinate' + (lines.length === 1 ? '' : 's') + '.');
     }
 
     /* ---------- Multi tab: row filtering + coordinate copy ---------- */
