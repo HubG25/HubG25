@@ -585,13 +585,6 @@
     </div>
 
     <div class="panel">
-      <h2>Map</h2>
-      <label class="field-label" style="margin-top:10px;">Water color</label>
-      <input type="color" id="waterColorInput" value="#a9cfe0">
-      <div class="hint">Water color applies to both the live map and exports. Terrain relief is fetched fresh for export too, and may take a moment.</div>
-    </div>
-
-    <div class="panel">
       <h2 id="targetSourceHeading">Target</h2>
       <label class="field-label" id="targetSourceInputLabel">Paste one or more G25 lines — <span style="color:var(--text-2)">Name,c1,c2,…,c25</span></label><label class="field-label" id="targetSourceInputLabel"><textarea id="targetInput" placeholder="Target,0.0123,-0.0456,0.0789,..."></textarea><span style="color: rgb(232, 235, 241); font-size: 12px">
       </span><button id="setTargetBtn" style="width: 100%; margin-top: 8px;">Set target</button></label><div id="sourceSelectorWrap" style="display:none; margin-top:10px;">
@@ -675,6 +668,36 @@ Yamnaya,0.0301,0.0117,..."></textarea>
         <div id="customStopsList"></div>
         <button id="addStopBtn" class="ghost small" style="width:100%;">+ Add color stop</button>
         <div class="hint">Position 0 = minimum distance, 1 = maximum. Add as many in-between colors as you like.</div>
+      </div>
+
+      <div class="check-row" style="margin-top:12px;">
+        <input type="checkbox" id="bandsCheck">
+        <label for="bandsCheck">Contour bands (stepped colour)</label>
+      </div>
+      <div id="bandsRow" style="display:none;">
+        <label class="field-label" style="margin-top:6px;">Number of bands</label>
+        <div class="slider-row">
+          <input type="range" id="bandsSlider" min="3" max="40" step="1" value="20">
+          <div class="val" id="bandsVal">20</div>
+        </div>
+        <div class="check-row">
+          <input type="checkbox" id="bandLinesCheck">
+          <label for="bandLinesCheck">Draw contour lines between bands</label>
+        </div>
+        <div id="bandLinesOpts" style="display:none;">
+          <label class="field-label" style="margin-top:6px;">Contour line opacity</label>
+          <div class="slider-row">
+            <input type="range" id="bandLineOpacitySlider" min="5" max="100" step="5" value="70">
+            <div class="val" id="bandLineOpacityVal">70%</div>
+          </div>
+          <label class="field-label" style="margin-top:6px;">Contour line thickness</label>
+          <div class="slider-row">
+            <input type="range" id="bandLineWidthSlider" min="1" max="6" step="1" value="2">
+            <div class="val" id="bandLineWidthVal">2px</div>
+          </div>
+          <div class="hint">Lines take the mean of the two band colours they divide, darkened, so each line stays tied to the shades around it. Opacity controls how strongly it reads against the fill.</div>
+        </div>
+        <div class="hint">Cuts the surface into equal steps between the min and max above instead of a continuous blend. The legend and the PNG export follow the same steps. Does not apply to "Closer to" maps, which are already categorical.</div>
       </div>
 
       <label class="field-label" style="margin-top:10px;">Gradient opacity</label>
@@ -876,7 +899,132 @@ function colorAt(t) {
 // (Closer-to mode does not use this — see computeCloserColorGrid, which blends each
 // source's actual color by spatial proximity instead of mapping an index through a palette.)
 function colorAtMapValue(t) {
-  return colorAt(currentMode === 'admixture' ? 1 - t : t);
+  const u = currentMode === 'admixture' ? 1 - t : t;
+  return colorAt(bandsEnabled ? bandCenter(u) : u);
+}
+
+/* -------------------------------------------------------------------------
+   Contour bands. Instead of a continuous ramp the palette is sampled at the
+   centre of N equal slices of the min→max range, so the surface reads as a
+   filled-contour map. Every consumer of colorAtMapValue (live surface, live
+   legend, PNG export, export legend) picks this up automatically.
+   ------------------------------------------------------------------------- */
+let bandsEnabled = false;
+let bandCount = 20;
+let bandLines = false;
+/* How far a contour line is blended into the pixel below it (0 = invisible,
+   1 = the line colour replaces the fill), and how many pixels wide it is. */
+let contourLineAlpha = 0.7;
+let contourLineWidth = 2;
+/* Contour lines are the mean of the two bands they divide, scaled down by this
+   factor. The mean on its own sits half a band step from either neighbour,
+   which is invisible at high band counts — darkening is what makes the line
+   read as a line while still belonging to the two colours around it. */
+const CONTOUR_LINE_DARKEN = 0.6;
+
+function bandIndexOf(u) {
+  const i = Math.floor(Math.max(0, Math.min(1, u)) * bandCount);
+  return i >= bandCount ? bandCount - 1 : (i < 0 ? 0 : i);
+}
+function bandCenter(u) {
+  return (bandIndexOf(u) + 0.5) / bandCount;
+}
+function bandIndexOfMapValue(t) {
+  return bandIndexOf(currentMode === 'admixture' ? 1 - t : t);
+}
+/* Band mode stores the normalised value as grey in the low-res grid so the
+   upscale interpolates VALUES, not colours — the palette is applied per output
+   pixel afterwards and band edges come out crisp instead of cross-faded. */
+function encodeT(t) {
+  return Math.round(Math.max(0, Math.min(1, t)) * 255);
+}
+function paintBandsFullRes(ctx, W, H, smoothPx, lineWidthPx) {
+  const id = ctx.getImageData(0, 0, W, H);
+  const d = id.data;
+  const lut = new Uint8Array(256 * 3);
+  const bIdx = new Uint8Array(256);
+  for (let i = 0; i < 256; i++) {
+    const t = i / 255;
+    const c = colorAtMapValue(t);
+    lut[i * 3] = c[0]; lut[i * 3 + 1] = c[1]; lut[i * 3 + 2] = c[2];
+    bIdx[i] = bandIndexOfMapValue(t);
+  }
+  const N = W * H;
+  // The upscale is bilinear, so its ramps are piecewise-linear and a contour
+  // drawn straight off them staircases along the grid. A small blur of the
+  // VALUE (still before quantising) rounds the isolines without moving them.
+  let gray = new Float32Array(N);
+  for (let i = 0, p = 0; i < N; i++, p += 4) gray[i] = d[p];
+  const r = Math.max(0, Math.round(smoothPx || 0));
+  if (r > 0) {
+    gray = boxBlur1D(gray, W, H, r, true);
+    gray = boxBlur1D(gray, W, H, r, false);
+  }
+  const bands = bandLines ? new Uint8Array(N) : null;
+  for (let i = 0, p = 0; i < N; i++, p += 4) {
+    const g = Math.max(0, Math.min(255, Math.round(gray[i])));
+    if (bands) bands[i] = bIdx[g];
+    d[p] = lut[g * 3]; d[p + 1] = lut[g * 3 + 1]; d[p + 2] = lut[g * 3 + 2]; d[p + 3] = 255;
+  }
+  if (bands) {
+    // Each contour line is drawn in a darkened mean of the two band colours it
+    // separates, then blended part-way into the pixel underneath.
+    const bandColors = new Uint8Array(bandCount * 3);
+    for (let i = 0; i < bandCount; i++) {
+      const c = colorAt((i + 0.5) / bandCount);
+      bandColors[i * 3] = c[0]; bandColors[i * 3 + 1] = c[1]; bandColors[i * 3 + 2] = c[2];
+    }
+    // Band changes are found one pixel at a time, then stamped out to the
+    // requested width. Painting into a separate buffer first keeps a thick line
+    // from being blended over itself where strokes overlap.
+    const lw = Math.max(1, Math.round(lineWidthPx || 1));
+    const lo = -((lw - 1) >> 1), hi = lw >> 1;
+    const mask = new Uint8Array(N);
+    const lineRGB = new Uint8Array(N * 3);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const i = y * W + x;
+        const b = bands[i];
+        let nb = -1;
+        if (x > 0 && bands[i - 1] !== b) nb = bands[i - 1];
+        else if (y > 0 && bands[i - W] !== b) nb = bands[i - W];
+        if (nb < 0) continue;
+        const r = (bandColors[b * 3] + bandColors[nb * 3]) / 2 * CONTOUR_LINE_DARKEN;
+        const g = (bandColors[b * 3 + 1] + bandColors[nb * 3 + 1]) / 2 * CONTOUR_LINE_DARKEN;
+        const bl = (bandColors[b * 3 + 2] + bandColors[nb * 3 + 2]) / 2 * CONTOUR_LINE_DARKEN;
+        for (let dy = lo; dy <= hi; dy++) {
+          const ny = y + dy;
+          if (ny < 0 || ny >= H) continue;
+          for (let dx = lo; dx <= hi; dx++) {
+            const nx = x + dx;
+            if (nx < 0 || nx >= W) continue;
+            const j = ny * W + nx;
+            mask[j] = 1;
+            lineRGB[j * 3] = r; lineRGB[j * 3 + 1] = g; lineRGB[j * 3 + 2] = bl;
+          }
+        }
+      }
+    }
+    const a = Math.max(0, Math.min(1, contourLineAlpha));
+    for (let i = 0, p = 0; i < N; i++, p += 4) {
+      if (!mask[i]) continue;
+      d[p] = d[p] * (1 - a) + lineRGB[i * 3] * a;
+      d[p + 1] = d[p + 1] * (1 - a) + lineRGB[i * 3 + 1] * a;
+      d[p + 2] = d[p + 2] * (1 - a) + lineRGB[i * 3 + 2] * a;
+    }
+  }
+  ctx.putImageData(id, 0, 0);
+}
+
+/* Legend ticks sit on band edges in band mode so the printed numbers match the
+   colour steps, and fall back to five even divisions otherwise. */
+function legendTickFractions() {
+  if (!bandsEnabled) return [0, 0.2, 0.4, 0.6, 0.8, 1];
+  const stride = Math.max(1, Math.ceil(bandCount / 6));
+  const out = [];
+  for (let i = 0; i <= bandCount; i += stride) out.push(i / bandCount);
+  if (out[out.length - 1] !== 1) out.push(1);
+  return out;
 }
 
 rebuildColorLUT();
@@ -956,6 +1104,32 @@ function computeCloserColorGrid(pts, gw, gh, step, power) {
   }
   return { gR, gG, gB };
 }
+
+/* Plain IDW value grid — straight-line pixel distance, water and all. */
+function computeIdwValueGrid(pts, gw, gh, step, power) {
+  const valGrid = new Float32Array(gw * gh);
+  for (let gy = 0; gy < gh; gy++) {
+    const py = gy * step;
+    for (let gx = 0; gx < gw; gx++) {
+      const px = gx * step;
+      let wSum = 0, vSum = 0, exact = null;
+      for (let i = 0; i < pts.length; i++) {
+        const dx = px - pts[i].x, dy = py - pts[i].y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < 0.25) { exact = pts[i].v; break; }
+        const w = 1 / Math.pow(d2, power / 2);
+        wSum += w;
+        vSum += w * pts[i].v;
+      }
+      valGrid[gy * gw + gx] = exact !== null ? exact : (vSum / wSum);
+    }
+  }
+  return valGrid;
+}
+
+/* Water fill for the PNG export (the live map shows OpenStreetMap underneath,
+   so it needs none). */
+const EXPORT_WATER_COLOR = '#a9cfe0';
 
 /* =========================================================================
    Map init
@@ -1103,6 +1277,13 @@ const HeatLayer = L.Layer.extend({
       this._projectedPointsKey = pointKey;
     }
 
+    // Land geometry for this view is needed twice — to build the water-blocking
+    // grid and to mask the finished surface — so project it once, up front.
+    const maskKey = getLandViewKey(map, { x: W, y: H });
+    const landPath = getCachedLandPath(maskKey, () => buildScaledLandPath(
+      (lat, lng) => map.latLngToLayerPoint([lat, lng]).subtract(topLeft)
+    ));
+
     // ---- low-res IDW grid, rendered then upscaled for smoothness ----
     const step = this._step;
     const gw = Math.max(1, Math.ceil(W / step));
@@ -1159,23 +1340,7 @@ const HeatLayer = L.Layer.extend({
       if (this._gridCache && this._gridCache.key === gridKey) {
         valGrid = this._gridCache.grid;
       } else {
-        valGrid = new Float32Array(gw * gh);
-        for (let gy = 0; gy < gh; gy++) {
-          const py = gy * step;
-          for (let gx = 0; gx < gw; gx++) {
-            const px = gx * step;
-            let wSum = 0, vSum = 0, exact = null;
-            for (let i = 0; i < pts.length; i++) {
-              const dx = px - pts[i].x, dy = py - pts[i].y;
-              const d2 = dx * dx + dy * dy;
-              if (d2 < 0.25) { exact = pts[i].v; break; }
-              const w = 1 / Math.pow(d2, power / 2);
-              wSum += w;
-              vSum += w * pts[i].v;
-            }
-            valGrid[gy * gw + gx] = exact !== null ? exact : (vSum / wSum);
-          }
-        }
+        valGrid = computeIdwValueGrid(pts, gw, gh, step, power);
         this._gridCache = { key: gridKey, grid: valGrid, w: gw, h: gh };
         this._blurCache.clear();
       }
@@ -1196,21 +1361,27 @@ const HeatLayer = L.Layer.extend({
 
       for (let i = 0; i < gw * gh; i++) {
         const t = (blurredGrid[i] - min) / range;
-        const [r, g, b] = colorAtMapValue(t);
         const idx = i * 4;
-        img.data[idx] = r; img.data[idx + 1] = g; img.data[idx + 2] = b; img.data[idx + 3] = 255;
+        if (bandsEnabled) {
+          const e = encodeT(t);
+          img.data[idx] = e; img.data[idx + 1] = e; img.data[idx + 2] = e;
+        } else {
+          const [r, g, b] = colorAtMapValue(t);
+          img.data[idx] = r; img.data[idx + 1] = g; img.data[idx + 2] = b;
+        }
+        img.data[idx + 3] = 255;
       }
     }
     sctx.putImageData(img, 0, 0);
 
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(small, 0, 0, gw, gh, 0, 0, W, H);
+    if (bandsEnabled && !isCloserColor) paintBandsFullRes(ctx, W, H, Math.min(8, Math.max(1, Math.round(step / 2))), contourLineWidth);
 
     // ---- land mask ----
     // The rasterized mask is also cached: smoothness/power/quality changes do not
     // need to refill a full-size canvas with the coastline geometry.
     const maskCanvas = this._maskCanvas;
-    const maskKey = getLandViewKey(map, { x: W, y: H });
     if (maskCanvas.width !== W || maskCanvas.height !== H || this._maskKey !== maskKey) {
       if (maskCanvas.width !== W || maskCanvas.height !== H) {
         maskCanvas.width = W;
@@ -1219,27 +1390,6 @@ const HeatLayer = L.Layer.extend({
       const mctx = this._maskCtx;
       mctx.clearRect(0, 0, W, H);
       mctx.fillStyle = '#fff';
-      const landPath = getCachedLandPath(maskKey, () => {
-        const path = new Path2D();
-        for (let pi = 0; pi < LAND_POLYGONS.length; pi++) {
-          const rings = LAND_POLYGONS[pi];
-          for (let ri = 0; ri < rings.length; ri++) {
-            const ring = rings[ri];
-            for (let vi = 0; vi < ring.length; vi++) {
-              const [lng, lat] = ring[vi];
-              const lp = map.latLngToLayerPoint([lat, lng]).subtract(topLeft);
-              if (vi === 0) path.moveTo(lp.x, lp.y);
-              else {
-                const prevLng = ring[vi - 1][0];
-                if (Math.abs(lng - prevLng) > 180) path.moveTo(lp.x, lp.y);
-                else path.lineTo(lp.x, lp.y);
-              }
-            }
-            path.closePath();
-          }
-        }
-        return path;
-      });
       mctx.fill(landPath, 'evenodd');
       this._maskKey = maskKey;
     }
@@ -1253,62 +1403,8 @@ const HeatLayer = L.Layer.extend({
   },
 });
 
-/* Colors water areas on the live map to match the export's water color —
-   fills the whole view then cuts out the land shape, leaving only the ocean
-   tinted. Relies on buildScaledLandPath, which is hoisted above this. */
-const WaterTintLayer = L.Layer.extend({
-  onAdd(map) {
-    this._map = map;
-    this._canvas = L.DomUtil.create('canvas', 'g25-water-canvas');
-    this._ctx = this._canvas.getContext('2d');
-    map.getPanes().overlayPane.appendChild(this._canvas);
-    map.on('moveend zoomend resize', this._reset, this);
-    this._color = '#a9cfe0';
-    this._reset();
-  },
-  onRemove(map) {
-    L.DomUtil.remove(this._canvas);
-    map.off('moveend zoomend resize', this._reset, this);
-  },
-  setColor(color) {
-    this._color = color;
-    this._draw();
-  },
-  _reset() {
-    if (!this._map) return;
-    const size = this._map.getSize();
-    const topLeft = this._map.containerPointToLayerPoint([0, 0]);
-    L.DomUtil.setPosition(this._canvas, topLeft);
-    this._canvas.width = size.x;
-    this._canvas.height = size.y;
-    this._topLeft = topLeft;
-    this._draw();
-  },
-  _draw() {
-    if (!this._map) return;
-    const ctx = this._ctx;
-    const W = this._canvas.width, H = this._canvas.height;
-    ctx.clearRect(0, 0, W, H);
-    const map = this._map, topLeft = this._topLeft;
-    const proj = (lat, lng) => map.latLngToLayerPoint([lat, lng]).subtract(topLeft);
-    const landPath = getCachedLandPath(getLandViewKey(map, { x: W, y: H }), () => buildScaledLandPath(proj));
-    ctx.fillStyle = this._color;
-    ctx.fillRect(0, 0, W, H);
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.fill(landPath, 'evenodd');
-    ctx.globalCompositeOperation = 'source-over';
-  },
-});
-const waterTintLayer = new WaterTintLayer();
-waterTintLayer.addTo(map);
-
 const heatLayer = new HeatLayer();
 heatLayer.addTo(map);
-
-const waterColorInput = document.getElementById('waterColorInput');
-waterColorInput.addEventListener('input', () => {
-  waterTintLayer.setColor(waterColorInput.value);
-});
 
 /* =========================================================================
    State
@@ -1945,6 +2041,50 @@ document.getElementById('addStopBtn').addEventListener('click', () => {
   applyColorScheme('custom');
 });
 
+/* ---------- contour bands & water blocking ---------- */
+const bandsCheck = document.getElementById('bandsCheck');
+const bandsRow = document.getElementById('bandsRow');
+const bandsSlider = document.getElementById('bandsSlider');
+const bandsValEl = document.getElementById('bandsVal');
+const bandLinesCheck = document.getElementById('bandLinesCheck');
+const bandLinesOpts = document.getElementById('bandLinesOpts');
+const bandLineOpacitySlider = document.getElementById('bandLineOpacitySlider');
+const bandLineOpacityVal = document.getElementById('bandLineOpacityVal');
+const bandLineWidthSlider = document.getElementById('bandLineWidthSlider');
+const bandLineWidthVal = document.getElementById('bandLineWidthVal');
+bandsEnabled = bandsCheck.checked;
+bandCount = parseInt(bandsSlider.value, 10);
+bandLines = bandLinesCheck.checked;
+contourLineAlpha = parseInt(bandLineOpacitySlider.value, 10) / 100;
+contourLineWidth = parseInt(bandLineWidthSlider.value, 10);
+bandLinesOpts.style.display = bandLines ? 'block' : 'none';
+bandsRow.style.display = bandsEnabled ? 'block' : 'none';
+
+bandsCheck.addEventListener('change', () => {
+  bandsEnabled = bandsCheck.checked;
+  bandsRow.style.display = bandsEnabled ? 'block' : 'none';
+  refreshColorsOnly();
+});
+bandsSlider.addEventListener('input', () => {
+  bandCount = parseInt(bandsSlider.value, 10);
+  bandsValEl.textContent = bandCount;
+  if (bandsEnabled) refreshColorsOnly();
+});
+bandLinesCheck.addEventListener('change', () => {
+  bandLines = bandLinesCheck.checked;
+  bandLinesOpts.style.display = bandLines ? 'block' : 'none';
+  if (bandsEnabled) refreshColorsOnly();
+});
+bandLineOpacitySlider.addEventListener('input', () => {
+  contourLineAlpha = parseInt(bandLineOpacitySlider.value, 10) / 100;
+  bandLineOpacityVal.textContent = bandLineOpacitySlider.value + '%';
+  if (bandsEnabled && bandLines) refreshColorsOnly();
+});
+bandLineWidthSlider.addEventListener('input', () => {
+  contourLineWidth = parseInt(bandLineWidthSlider.value, 10);
+  bandLineWidthVal.textContent = contourLineWidth + 'px';
+  if (bandsEnabled && bandLines) refreshColorsOnly();
+});
 /* ---------- generate ---------- */
 const statusBar = document.getElementById('statusBar');
 const genHint = document.getElementById('genHint');
@@ -2253,16 +2393,14 @@ function drawLegend(min, max) {
 
   const ticksEl = document.getElementById('legendTicks');
   ticksEl.innerHTML = '';
-  const steps = 5;
-  for (let i = 0; i <= steps; i++) {
-    const frac = i / steps;
+  legendTickFractions().forEach(frac => {
     const val = max - frac * (max - min);
     const span = document.createElement('span');
     span.style.top = (frac * H) + 'px';
     if (currentMode === 'admixture') span.textContent = Math.round(val * 100) + '%';
     else span.textContent = val.toFixed(3);
     ticksEl.appendChild(span);
-  }
+  });
 }
 
 /* =========================================================================
@@ -2470,28 +2608,19 @@ async function renderExportCanvas(scale, includePins, includeLegend, includeLege
         img.data[idx + 3] = 255;
       }
     } else {
-      const valGrid = new Float32Array(gw * gh);
-      for (let gy = 0; gy < gh; gy++) {
-        const py = gy * step;
-        for (let gx = 0; gx < gw; gx++) {
-          const px = gx * step;
-          let wSum = 0, vSum = 0, exact = null;
-          for (let i = 0; i < pts.length; i++) {
-            const dx = px - pts[i].x, dy = py - pts[i].y;
-            const d2 = dx * dx + dy * dy;
-            if (d2 < 0.25) { exact = pts[i].v; break; }
-            const w = 1 / Math.pow(d2, power / 2);
-            wSum += w; vSum += w * pts[i].v;
-          }
-          valGrid[gy * gw + gx] = exact !== null ? exact : (vSum / wSum);
-        }
-      }
+      const valGrid = computeIdwValueGrid(pts, gw, gh, step, power);
       const blurredGrid = exportBlurRadius > 0 ? blurValueGrid(valGrid, gw, gh, exportBlurRadius) : valGrid;
       for (let i = 0; i < gw * gh; i++) {
         const t = (blurredGrid[i] - min) / range;
-        const [r, g, b] = colorAtMapValue(t);
         const idx = i * 4;
-        img.data[idx] = r; img.data[idx + 1] = g; img.data[idx + 2] = b; img.data[idx + 3] = 255;
+        if (bandsEnabled) {
+          const e = encodeT(t);
+          img.data[idx] = e; img.data[idx + 1] = e; img.data[idx + 2] = e;
+        } else {
+          const [r, g, b] = colorAtMapValue(t);
+          img.data[idx] = r; img.data[idx + 1] = g; img.data[idx + 2] = b;
+        }
+        img.data[idx + 3] = 255;
       }
     }
     sctx.putImageData(img, 0, 0);
@@ -2501,6 +2630,7 @@ async function renderExportCanvas(scale, includePins, includeLegend, includeLege
     const hctx = heatCanvas.getContext('2d');
     hctx.imageSmoothingEnabled = true;
     hctx.drawImage(small, 0, 0, gw, gh, 0, 0, W, H);
+    if (bandsEnabled && !isCloserColor) paintBandsFullRes(hctx, W, H, Math.min(16, Math.max(1, Math.round(step / 2))), contourLineWidth * scale);
 
     // clip heat to land using the same path
     const maskCanvas = document.createElement('canvas');
@@ -2627,16 +2757,12 @@ async function renderExportCanvas(scale, includePins, includeLegend, includeLege
     ctx.font = `${10.5 * scale}px ${'"SFMono-Regular",Consolas,monospace'}`;
     ctx.fillStyle = '#e8ebf1';
     ctx.textBaseline = 'middle';
-    const steps = 5;
-    for (let i = 0; i <= steps; i++) {
-      const frac = i / steps;
+    legendTickFractions().forEach(frac => {
       const val = max - frac * (max - min);
       const ty = barY + frac * barH;
-      let label;
-      if (currentMode === 'admixture') label = Math.round(val * 100) + '%';
-      else label = val.toFixed(3);
+      const label = currentMode === 'admixture' ? Math.round(val * 100) + '%' : val.toFixed(3);
       ctx.fillText(label, barX + barW + 6 * scale, ty);
-    }
+    });
   }
 
   return { canvas, terrainOk };
@@ -2663,7 +2789,7 @@ document.getElementById('downloadPngBtn').addEventListener('click', async () => 
   const includeTerrain = document.getElementById('exportTerrainCheck').checked;
   const includeBorders = document.getElementById('exportBordersCheck').checked;
   const bordersOpacity = parseInt(document.getElementById('exportBordersOpacitySlider').value, 10) / 100;
-  const waterColor = document.getElementById('waterColorInput').value;
+  const waterColor = EXPORT_WATER_COLOR;
   const originalLabel = btn.textContent;
   btn.disabled = true;
   btn.textContent = includeTerrain ? 'Fetching terrain…' : 'Rendering…';
