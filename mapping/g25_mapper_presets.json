@@ -20070,39 +20070,6 @@
         "visible": true
       },
       {
-        "name": "Greek_Eastern_Rumelia/Northern_Thrace_(n=15)",
-        "vec": [
-          0.1207206,
-          0.14249447,
-          0.015291667,
-          -0.014982867,
-          0.016782067,
-          -0.0046499333,
-          0.0038289333,
-          0.0018989333,
-          -0.0050744,
-          0.011302667,
-          0.0023316,
-          -0.0004272,
-          -0.002311,
-          0.0068400667,
-          -0.0140334,
-          -0.00083893333,
-          0.0094524667,
-          -0.00016426667,
-          0.0030457333,
-          -0.0046029333,
-          -0.0045642,
-          -0.0012744667,
-          0.0021214,
-          -0.00065653333,
-          -0.0014232
-        ],
-        "lat": 41.23065518322738,
-        "lng": 25.412155632058653,
-        "visible": true
-      },
-      {
         "name": "Greece_Attica_(n=6)",
         "vec": [
           0.11739733,
@@ -22479,7 +22446,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Acre",
+        "name": "Brazilian_Acre",
         "vec": [
           -0.005616889,
           -0.011661399,
@@ -22512,7 +22479,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Alagoas",
+        "name": "Brazilian_Alagoas",
         "vec": [
           -0.078923517,
           0.056612392,
@@ -22545,7 +22512,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Amapa",
+        "name": "Brazilian_Amapa",
         "vec": [
           -0.073758167,
           -0.03448217,
@@ -22578,7 +22545,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Amazonas",
+        "name": "Brazilian_Amazonas",
         "vec": [
           -0.002822856,
           -0.085320794,
@@ -22611,7 +22578,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Bahia",
+        "name": "Brazilian_Bahia",
         "vec": [
           -0.178075685,
           0.07664927,
@@ -22644,7 +22611,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Ceara",
+        "name": "Brazilian_Ceara",
         "vec": [
           -0.023735558,
           0.027227699,
@@ -22677,7 +22644,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Distrito_Federal",
+        "name": "Brazilian_Distrito_Federal",
         "vec": [
           -0.084888051,
           0.057817963,
@@ -22710,7 +22677,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Espirito_Santo",
+        "name": "Brazilian_Espirito_Santo",
         "vec": [
           -0.047666407,
           0.090783368,
@@ -22743,7 +22710,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Goias",
+        "name": "Brazilian_Goias",
         "vec": [
           -0.049246981,
           0.084334978,
@@ -22776,7 +22743,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Maranhao",
+        "name": "Brazilian_Maranhao",
         "vec": [
           -0.111925269,
           0.011537126,
@@ -22809,7 +22776,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Mato_Grosso",
+        "name": "Brazilian_Mato_Grosso",
         "vec": [
           -0.042262331,
           0.051058624,
@@ -22842,7 +22809,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Mato_Grosso_Do_Sul",
+        "name": "Brazilian_Mato_Grosso_Do_Sul",
         "vec": [
           -0.009359043,
           0.04013395,
@@ -22875,7 +22842,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Minas_Gerais",
+        "name": "Brazilian_Minas_Gerais",
         "vec": [
           -0.090442933,
           0.093275678,
@@ -22908,7 +22875,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Para",
+        "name": "Brazilian_Para",
         "vec": [
           -0.03673406,
           -0.02527749,
@@ -22941,7 +22908,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Paraiba",
+        "name": "Brazilian_Paraiba",
         "vec": [
           -0.045388499,
           0.06234062,
@@ -22974,7 +22941,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Parana",
+        "name": "Brazilian_Parana",
         "vec": [
           0.037661081,
           0.050399991,
@@ -23007,7 +22974,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Pernambuco",
+        "name": "Brazilian_Pernambuco",
         "vec": [
           -0.063739599,
           0.064525701,
@@ -23040,7 +23007,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Piaui",
+        "name": "Brazilian_Piaui",
         "vec": [
           -0.068223571,
           0.044838461,
@@ -23073,7 +23040,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Rio_De_Janeiro",
+        "name": "Brazilian_Rio_De_Janeiro",
         "vec": [
           -0.136037725,
           0.095042951,
@@ -23106,7 +23073,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Rio_Grande_Do_Norte",
+        "name": "Brazilian_Rio_Grande_Do_Norte",
         "vec": [
           -0.034150169,
           0.047635031,
@@ -23139,7 +23106,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Rio_Grande_Do_Sul",
+        "name": "Brazilian_Rio_Grande_Do_Sul",
         "vec": [
           0.068404324,
           0.092594153,
@@ -23172,7 +23139,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Rondonia",
+        "name": "Brazilian_Rondonia",
         "vec": [
           -0.016007625,
           0.033275483,
@@ -23205,7 +23172,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Roraima",
+        "name": "Brazilian_Roraima",
         "vec": [
           0.005623686,
           -0.121952672,
@@ -23238,7 +23205,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Santa_Catarina",
+        "name": "Brazilian_Santa_Catarina",
         "vec": [
           0.080087817,
           0.110355826,
@@ -23271,7 +23238,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Sao_Paulo",
+        "name": "Brazilian_Sao_Paulo",
         "vec": [
           -0.019060439,
           0.075613367,
@@ -23304,7 +23271,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Sergipe",
+        "name": "Brazilian_Sergipe",
         "vec": [
           -0.130941173,
           0.083711641,
@@ -23337,7 +23304,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_Tocantins",
+        "name": "Brazilian_Tocantins",
         "vec": [
           -0.080109804,
           0.045032022,
@@ -23370,7 +23337,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_RS_Porto_Alegre",
+        "name": "Brazilian_RS_Porto_Alegre",
         "vec": [
           -0.011704395,
           0.088067253,
@@ -23403,7 +23370,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_SC_Florianopolis",
+        "name": "Brazilian_SC_Florianopolis",
         "vec": [
           0.034389048,
           0.109055776,
@@ -23469,7 +23436,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_SP_Sao_Paulo",
+        "name": "Brazilian_SP_Sao_Paulo",
         "vec": [
           -0.04943991,
           0.078789643,
@@ -23502,7 +23469,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_RJ_Rio_De_Janeiro",
+        "name": "Brazilian_RJ_Rio_De_Janeiro",
         "vec": [
           -0.117769386,
           0.09314607,
@@ -23535,7 +23502,7 @@
         "visible": true
       },
       {
-        "name": "Brazilianian_MG_Belo_Horizonte",
+        "name": "Brazilian_MG_Belo_Horizonte",
         "vec": [
           -0.098108595,
           0.109469203,
