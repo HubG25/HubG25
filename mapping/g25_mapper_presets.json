@@ -16836,7 +16836,7 @@
         "visible": true
       },
       {
-        "name": "Argentine_Chubut",
+        "name": "Argentina_Chubut",
         "vec": [
           0.082204,
           -0.022102,
@@ -16869,7 +16869,7 @@
         "visible": true
       },
       {
-        "name": "Argentine_Mendoza",
+        "name": "Argentina_Mendoza",
         "vec": [
           0.08864,
           0.039803,
@@ -16902,7 +16902,7 @@
         "visible": true
       },
       {
-        "name": "Argentine_San_Juan",
+        "name": "Argentina_San_Juan",
         "vec": [
           0.0834455,
           0.0085289,
@@ -16935,7 +16935,7 @@
         "visible": true
       },
       {
-        "name": "Argentine_La_Pampa_Octavón",
+        "name": "Argentina_La_Pampa_Octavón",
         "vec": [
           0.1033547,
           0.0683139,
@@ -16968,7 +16968,7 @@
         "visible": true
       },
       {
-        "name": "Argentine_La_Pampa_Euro-Mestizo",
+        "name": "Argentina_La_Pampa_Euro-Mestizo",
         "vec": [
           0.108515,
           0.110658,
@@ -17001,7 +17001,7 @@
         "visible": true
       },
       {
-        "name": "Argentine_Cordoba_Castizo",
+        "name": "Argentina_Cordoba_Castizo",
         "vec": [
           0.0881144,
           0.0543707,
@@ -17034,7 +17034,7 @@
         "visible": true
       },
       {
-        "name": "Argentine_Entre_Ríos",
+        "name": "Argentina_Entre_Ríos",
         "vec": [
           0.112343,
           0.116432,
@@ -17331,7 +17331,7 @@
         "visible": true
       },
       {
-        "name": "Argentine_Corrientes",
+        "name": "Argentina_Corrientes",
         "vec": [
           0.070671,
           -0.026349,
@@ -17364,7 +17364,7 @@
         "visible": true
       },
       {
-        "name": "Argentine_Misiones",
+        "name": "Argentina_Misiones",
         "vec": [
           0.086548,
           0.014033,
@@ -17397,7 +17397,7 @@
         "visible": true
       },
       {
-        "name": "Argentine_Chaco",
+        "name": "Argentina_Chaco",
         "vec": [
           0.073852,
           -0.056407,
@@ -17727,7 +17727,7 @@
         "visible": true
       },
       {
-        "name": "Argentine_Chubut_C.Rivadavia",
+        "name": "Argentina_Chubut_C.Rivadavia",
         "vec": [
           0.0645764,
           -0.0870777,
@@ -20065,8 +20065,8 @@
           0.00061481,
           -0.0017295
         ],
-        "lat": 41.03047043660799,
-        "lng": 24.97979552092727,
+        "lat": 41.08293751293889,
+        "lng": 25.213338978309455,
         "visible": true
       },
       {
@@ -20098,8 +20098,8 @@
           -0.00065653333,
           -0.0014232
         ],
-        "lat": 41.466762228335135,
-        "lng": 24.38654423753505,
+        "lat": 41.23065518322738,
+        "lng": 25.412155632058653,
         "visible": true
       },
       {
@@ -21088,8 +21088,8 @@
           0.0025963,
           -0.001457425
         ],
-        "lat": 41.64359623933641,
-        "lng": 24.854527535669387,
+        "lat": 41.41925020677362,
+        "lng": 25.042930007648323,
         "visible": true
       },
       {
@@ -28097,7 +28097,7 @@
         "visible": true
       },
       {
-        "name": "Argentine_Antofagasta_2100BP_(n=2)",
+        "name": "Argentina_Antofagasta_2100BP_(n=2)",
         "vec": [
           0.054066,
           -0.312275,
@@ -28130,7 +28130,7 @@
         "visible": true
       },
       {
-        "name": "Argentine_Mar_Chiquita_2500BP_(n=4)",
+        "name": "Argentina_Mar_Chiquita_2500BP_(n=4)",
         "vec": [
           0.05492,
           -0.3140525,
@@ -28163,7 +28163,7 @@
         "visible": true
       },
       {
-        "name": "Argentine_Southern_Pampas_2600BP_(n=10)",
+        "name": "Argentina_Southern_Pampas_2600BP_(n=10)",
         "vec": [
           0.0515619,
           -0.3187746,
@@ -28196,7 +28196,7 @@
         "visible": true
       },
       {
-        "name": "Argentine_Yamana_1500BP_(n=1)",
+        "name": "Argentina_Yamana_1500BP_(n=1)",
         "vec": [
           0.053497,
           -0.313799,
