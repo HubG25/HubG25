@@ -4470,9 +4470,9 @@
        Shared by the source/target lookup bars, the explorer search boxes and the
        explorer per-column filters, so one syntax works everywhere:
 
-         Spain, Portugal   comma is OR    - either term
-         Spain IA          space is AND   - both terms, anywhere in the line/row
-         Spain, -Portugal  minus excludes - excludes apply to the whole query,
+         Term_1, Term_2   comma is OR    - either term
+         Term_1 Term_2          space is AND   - both terms, anywhere in the line/row
+         Term_1, -Term_2  minus excludes - excludes apply to the whole query,
                                             not just the group they sit in
          "New York"        quotes keep a phrase (spaces and commas) together
 
@@ -4946,8 +4946,8 @@ Search is case sensitive.
   </div>
   <div class="tab" id="source_tab" style="display: none; height: calc(100% - 4em);">
     <div class="st-lookup-bar">
-      <input type="text" id="sourceLookup" class="st-lookup-input" placeholder="Filter lines in source — Spain, Portugal · Spain IA · Spain, -Portugal" title="comma = or · space = and · -term excludes · "quotes" for phrases" oninput="lookupFilter(&#39;source&#39;)">
-      <span class="info-pop" tabindex="0" data-tooltip="<b>Search operators</b><br><b>Spain, Portugal</b> &mdash; comma is OR: either term.<br><b>Spain IA</b> &mdash; space is AND: both terms must appear.<br><b>Spain, -Portugal</b> &mdash; minus excludes; exclusions apply to the whole query.<br><b>&quot;Iron Age&quot;</b> &mdash; quotes keep a phrase together.<br>Groups combine: <b>Spain IA, Portugal IA</b>.">i</span>
+      <input type="text" id="sourceLookup" class="st-lookup-input" placeholder="Filter lines in source" title="comma = or · space = and · -term excludes · "quotes" for phrases" oninput="lookupFilter(&#39;source&#39;)">
+      <span class="info-pop" tabindex="0" data-tooltip="<b>Search operators</b><br><b>Term_1, Term_2</b> &mdash; comma is OR: either term.<br><b>Term_1 Term_2</b> &mdash; space is AND: both terms must appear.<br><b>Term_1, -Term_2</b> &mdash; minus excludes; exclusions apply to the whole query.<br><b>&quot;Iron Age&quot;</b> &mdash; quotes keep a phrase together.<br>Groups combine: <b>Term_1 IA, Term_2 IA</b>.">i</span>
     </div>
     <div id="datasetButtonsSource" style="display: flex; gap: 0.4em; padding: 0.4em; background: rgba(0,0,0,0.15); border-radius: 8px 8px 0 0; margin-bottom: -1px; flex-wrap: wrap;"><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(0)">akbari et al. 2026 G25</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(1)">Global25 PCA ancient</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(2)">Global25 PCA ancient averages</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(3)">Global25 PCA modern averages</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(4)">Global25 PCA modern individuals</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(5)">Moriopoulos Collection 2026 - Ancients</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(6)">Moriopoulos Collection 2026 - Moderns</button></div>
 
@@ -4955,8 +4955,8 @@ Search is case sensitive.
   </div>
   <div class="tab" id="target_tab" style="display: none; height: calc(100% - 4em);">
     <div class="st-lookup-bar">
-      <input type="text" id="targetLookup" class="st-lookup-input" placeholder="Filter lines in target — Spain, Portugal · Spain IA · Spain, -Portugal" title="comma = or · space = and · -term excludes · "quotes" for phrases" oninput="lookupFilter(&#39;target&#39;)">
-      <span class="info-pop" tabindex="0" data-tooltip="<b>Search operators</b><br><b>Spain, Portugal</b> &mdash; comma is OR: either term.<br><b>Spain IA</b> &mdash; space is AND: both terms must appear.<br><b>Spain, -Portugal</b> &mdash; minus excludes; exclusions apply to the whole query.<br><b>&quot;Iron Age&quot;</b> &mdash; quotes keep a phrase together.<br>Groups combine: <b>Spain IA, Portugal IA</b>.">i</span>
+      <input type="text" id="targetLookup" class="st-lookup-input" placeholder="Filter lines in target" title="comma = or · space = and · -term excludes · "quotes" for phrases" oninput="lookupFilter(&#39;target&#39;)">
+      <span class="info-pop" tabindex="0" data-tooltip="<b>Search operators</b><br><b>Term_1, Term_2</b> &mdash; comma is OR: either term.<br><b>Term_1 Term_2</b> &mdash; space is AND: both terms must appear.<br><b>Term_1, -Term_2</b> &mdash; minus excludes; exclusions apply to the whole query.<br><b>&quot;Iron Age&quot;</b> &mdash; quotes keep a phrase together.<br>Groups combine: <b>Term_1 IA, Term_2 IA</b>.">i</span>
     </div>
     <textarea onchange="inputHasChanged = true" class="tabinput" id="target" spellcheck="false" placeholder="Paste data here. Comma-separated values, no header." style="height: calc(100% - 3.2em); border-radius: 0 0 8px 8px; width: 100%;" data-full-value=""></textarea>
   </div>
@@ -5254,8 +5254,8 @@ Source_2,0.0388,-0.0241,..."></textarea>
   <div class="tab" id="aadr" style="display: none; height: calc(100% - 6.6em);">
     <div class="aadr-table-wrap" id="aadrTableWrap">
       <div class="aadr-toolbar">
-        <input type="text" id="aadrSearch" class="st-lookup-input" placeholder="Search all columns — Spain, Portugal · Spain IA · Spain, -Portugal" title="comma = or · space = and · -term excludes · "quotes" for phrases" oninput="explDebouncedFilter(&#39;aadr&#39;)">
-        <span class="info-pop" tabindex="0" data-tooltip="<b>Search operators</b><br><b>Spain, Portugal</b> &mdash; comma is OR: either term.<br><b>Spain IA</b> &mdash; space is AND: both terms must appear.<br><b>Spain, -Portugal</b> &mdash; minus excludes; exclusions apply to the whole query.<br><b>&quot;Iron Age&quot;</b> &mdash; quotes keep a phrase together.<br>Groups combine: <b>Spain IA, Portugal IA</b>.">i</span>
+        <input type="text" id="aadrSearch" class="st-lookup-input" placeholder="Search all columns" title="comma = or · space = and · -term excludes · "quotes" for phrases" oninput="explDebouncedFilter(&#39;aadr&#39;)">
+        <span class="info-pop" tabindex="0" data-tooltip="<b>Search operators</b><br><b>Term_1, Term_2</b> &mdash; comma is OR: either term.<br><b>Term_1 Term_2</b> &mdash; space is AND: both terms must appear.<br><b>Term_1, -Term_2</b> &mdash; minus excludes; exclusions apply to the whole query.<br><b>&quot;Iron Age&quot;</b> &mdash; quotes keep a phrase together.<br>Groups combine: <b>Term_1 IA, Term_2 IA</b>.">i</span>
         <button class="buttons small" onclick="explClearSearch(&#39;aadr&#39;)" title="Clear search">×</button>
         <button class="buttons" id="aadrCopyAll" onclick="explCopyAll(&#39;aadr&#39;)">copy all</button>
       </div>
@@ -5272,8 +5272,8 @@ Source_2,0.0388,-0.0241,..."></textarea>
   <div class="tab" id="akbari" style="display: none; height: calc(100% - 6.6em);">
     <div class="aadr-table-wrap" id="akbTableWrap">
       <div class="aadr-toolbar">
-        <input type="text" id="akbSearch" class="st-lookup-input" placeholder="Search all columns — Spain, Portugal · Spain IA · Spain, -Portugal" title="comma = or · space = and · -term excludes · "quotes" for phrases" oninput="explDebouncedFilter(&#39;akbari&#39;)">
-        <span class="info-pop" tabindex="0" data-tooltip="<b>Search operators</b><br><b>Spain, Portugal</b> &mdash; comma is OR: either term.<br><b>Spain IA</b> &mdash; space is AND: both terms must appear.<br><b>Spain, -Portugal</b> &mdash; minus excludes; exclusions apply to the whole query.<br><b>&quot;Iron Age&quot;</b> &mdash; quotes keep a phrase together.<br>Groups combine: <b>Spain IA, Portugal IA</b>.">i</span>
+        <input type="text" id="akbSearch" class="st-lookup-input" placeholder="Search all columns" title="comma = or · space = and · -term excludes · "quotes" for phrases" oninput="explDebouncedFilter(&#39;akbari&#39;)">
+        <span class="info-pop" tabindex="0" data-tooltip="<b>Search operators</b><br><b>Term_1, Term_2</b> &mdash; comma is OR: either term.<br><b>Term_1 Term_2</b> &mdash; space is AND: both terms must appear.<br><b>Term_1, -Term_2</b> &mdash; minus excludes; exclusions apply to the whole query.<br><b>&quot;Iron Age&quot;</b> &mdash; quotes keep a phrase together.<br>Groups combine: <b>Term_1 IA, Term_2 IA</b>.">i</span>
         <button class="buttons small" onclick="explClearSearch(&#39;akbari&#39;)" title="Clear search">×</button>
         <button class="buttons" id="akbCopyAll" onclick="explCopyAll(&#39;akbari&#39;)">copy all</button>
       </div>
