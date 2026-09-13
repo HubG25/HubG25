@@ -316,12 +316,15 @@
     -webkit-user-select: none; user-select: none;
   }
   ::selection { color: #0b1613; background: var(--accent); }
-  .singleinfo { font-weight: normal; }
+  .singleinfo { font-weight: normal; color: var(--text-2); font-size: 0.95em; margin-top: 0.15em; }
   .singleinfo::before { content: attr(data-nonselectable); }
   .singleheader {
     text-align: left; width: 100%; padding-bottom: 0.7em;
-    color: var(--accent); font-weight: 600;
+    color: var(--text-1); font-weight: 600;
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    line-height: 1.6;
   }
+  .singleheader .singletargetname { color: var(--text-0); }
   .singleleftcolumn { text-align: right; padding-right: 0.7em; }
   .singlerightcolumn { text-align: left; width: 100%; }
   .multitablewrapper { overflow-x: auto; padding-bottom: 1em; }
@@ -402,8 +405,11 @@
     font-size: 9.5px; font-weight: 700; line-height: 1; cursor: help; vertical-align: middle;
     font-family: var(--sans);
   }
+  .st-lookup-bar .info-pop, .aadr-toolbar .info-pop {
+    flex: none; width: 15px; height: 15px; font-size: 10px; margin: 0 2px 0 2px;
+  }
   #globalInfoTooltip {
-    display: none; position: fixed; z-index: 9999; width: 230px; max-width: 70vw;
+    display: none; position: fixed; z-index: 9999; width: 260px; max-width: 70vw;
     background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-md);
     padding: 8px 10px; font-size: 10.5px; font-weight: 400; line-height: 1.5;
     color: var(--text-1); text-transform: none; letter-spacing: normal;
@@ -2776,7 +2782,7 @@
         return b[1] - a[1];
       });
       time = Date.now() - time;
-      outputMsg = "<table><tr><th colspan='" + (addBarChart == 2 ? 3 : 2) + "' class='singleheader'>Target: " + targetArray[targetId][0] + "<br/>";
+      outputMsg = "<table><tr><th colspan='" + (addBarChart == 2 ? 3 : 2) + "' class='singleheader'>Target: <span class=\"singletargetname\">" + targetArray[targetId][0] + "</span><br/>";
       outputMsg += "Distance: " + (100 * result.distance).toFixed(4) + "% / " + result.distance.toFixed(8) + (nPop == 0 ? "" : " | R" + nPop + "P") + (addDistCol > 0 ? " | ADC: " + adcFormat(addDistCol) + (addDistColRecal ? " RC" : "") : "") + "<br/>";
       outputMsg += '<div class="singleinfo nonselectable" data-nonselectable="' + (nPop == 0 ? 'Sources: ' + sourceNumLocal + ' | Cycles: ' + Math.ceil(sourceNumLocal * cyclesX / 4) : 'Populations: ' + result.pops + ' | Iterations: ' + result.iter) + ' | Time: ' + time / 1000 + '&nbsp;s' + '"></div>';
       outputMsg += "</th></tr>";
@@ -3625,8 +3631,8 @@
         ta.dataset.filtering = "1";
       }
       const lines = (ta.dataset.fullValue || "").split("\n");
-      const ql = q.toLowerCase();
-      const filtered = lines.filter(l => l.toLowerCase().indexOf(ql) >= 0);
+      const query = qParseCached(q);
+      const filtered = lines.filter(l => qMatch(query, l));
       ta.value = filtered.join("\n");
     }
     // Custom Gen defaults to Ghost Generator on first load
@@ -4434,7 +4440,7 @@
       ).join('');
       explEl(key, 'FilterRow').innerHTML = cols.map((c, i) =>
         '<div class="aadr-filter-cell"><input type="text" placeholder="' +
-          (d.rangeSet.has(c.key) ? 'e.g. 1200-2000' : 'Filter…') +
+          (d.rangeSet.has(c.key) ? 'e.g. 1200-2000' : 'Spain, -Portugal') +
           '" oninput="explColFilterInput(\'' + key + '\',' + i + ', this.value)"></div>'
       ).join('');
     }
@@ -4460,59 +4466,145 @@
       explApplyFilters(key);
     }
 
-    // Commas are treated as term separators, so they must not block a match.
-    function explNormalizeForMatch(str) {
-      return String(str).replace(/,/g, ' ');
+    /* ===== query language =====
+       Shared by the source/target lookup bars, the explorer search boxes and the
+       explorer per-column filters, so one syntax works everywhere:
+
+         Spain, Portugal   comma is OR    - either term
+         Spain IA          space is AND   - both terms, anywhere in the line/row
+         Spain, -Portugal  minus excludes - excludes apply to the whole query,
+                                            not just the group they sit in
+         "New York"        quotes keep a phrase (spaces and commas) together
+
+       Commas inside the data are treated as separators too, so a term never has
+       to span one. Matching is case-insensitive substring, as before. */
+
+    function qNormalize(str) {
+      return String(str).toLowerCase().replace(/,/g, ' ');
     }
 
-    function explMatchesTerm(value, term) {
-      if (!term) return true;
-      const normalizedValue = explNormalizeForMatch(value).toLowerCase();
-      if (term.startsWith('-')) {
-        const negatedTerm = explNormalizeForMatch(term.substring(1)).trim();
-        return normalizedValue.indexOf(negatedTerm) === -1;
+    // Splits on commas that are not inside quotes.
+    function qSplitGroups(str) {
+      const out = [];
+      let buf = '', inQuote = false;
+      for (let i = 0; i < str.length; i++) {
+        const ch = str[i];
+        if (ch === '"') { inQuote = !inQuote; buf += ch; }
+        else if (ch === ',' && !inQuote) { out.push(buf); buf = ''; }
+        else buf += ch;
       }
-      const normalizedTerm = explNormalizeForMatch(term).trim();
-      return normalizedValue.indexOf(normalizedTerm) !== -1;
+      out.push(buf);
+      return out;
     }
 
-    // Comma-separated terms: any positive term may match (OR), every negative
-    // term must not match (AND NOT).
+    function qTokenize(chunk) {
+      const tokens = [], re = /(-?)"([^"]*)"|(\S+)/g;
+      let m;
+      while ((m = re.exec(chunk)) !== null) {
+        const t = m[2] !== undefined ? (m[1] || '') + m[2] : m[3];
+        if (t && t !== '-') tokens.push(t);
+      }
+      return tokens;
+    }
+
+    function qParse(str) {
+      const q = { groups: [], negatives: [], empty: true };
+      if (!str) return q;
+      qSplitGroups(String(str)).forEach(function (chunk) {
+        const positives = [];
+        qTokenize(chunk).forEach(function (token) {
+          if (token.charAt(0) === '-' && token.length > 1) {
+            const neg = qNormalize(token.slice(1)).trim();
+            if (neg) q.negatives.push(neg);
+          } else {
+            const pos = qNormalize(token).trim();
+            if (pos) positives.push(pos);
+          }
+        });
+        if (positives.length) q.groups.push(positives);
+      });
+      q.empty = !q.groups.length && !q.negatives.length;
+      return q;
+    }
+
+    /* Parsing is cheap but runs per cell per row, so keep the last few around. */
+    const Q_CACHE = new Map();
+    function qParseCached(str) {
+      let q = Q_CACHE.get(str);
+      if (!q) {
+        q = qParse(str);
+        if (Q_CACHE.size > 200) Q_CACHE.clear();
+        Q_CACHE.set(str, q);
+      }
+      return q;
+    }
+
+    // Match one piece of text (a source/target line, or a single cell).
+    function qMatch(q, text) {
+      if (q.empty) return true;
+      const t = qNormalize(text);
+      for (let i = 0; i < q.negatives.length; i++) {
+        if (t.indexOf(q.negatives[i]) !== -1) return false;
+      }
+      if (!q.groups.length) return true;
+      for (let g = 0; g < q.groups.length; g++) {
+        const terms = q.groups[g];
+        let all = true;
+        for (let i = 0; i < terms.length; i++) {
+          if (t.indexOf(terms[i]) === -1) { all = false; break; }
+        }
+        if (all) return true;
+      }
+      return false;
+    }
+
+    /* Row match for the explorer search: the terms of an AND group may land in
+       different columns ("Spain IA" finds a Spanish row dated IA), but no term
+       is allowed to straddle two columns. */
+    function qMatchRow(q, row, nCols) {
+      if (q.empty) return true;
+      const cells = new Array(nCols);
+      for (let c = 0; c < nCols; c++) {
+        const v = row[c];
+        cells[c] = (v === null || v === undefined) ? '' : qNormalize(v);
+      }
+      for (let i = 0; i < q.negatives.length; i++) {
+        const neg = q.negatives[i];
+        for (let c = 0; c < nCols; c++) if (cells[c].indexOf(neg) !== -1) return false;
+      }
+      if (!q.groups.length) return true;
+      for (let g = 0; g < q.groups.length; g++) {
+        const terms = q.groups[g];
+        let all = true;
+        for (let i = 0; i < terms.length && all; i++) {
+          let found = false;
+          for (let c = 0; c < nCols; c++) {
+            if (cells[c].indexOf(terms[i]) !== -1) { found = true; break; }
+          }
+          if (!found) all = false;
+        }
+        if (all) return true;
+      }
+      return false;
+    }
+
     function explMatchesFilter(value, filterStr) {
       if (!filterStr) return true;
       if (value === null || value === undefined) return false;
-      const terms = filterStr.split(',').map(t => t.trim()).filter(t => t);
-      if (terms.length === 0) return true;
-      const positiveTerms = terms.filter(t => !t.startsWith('-'));
-      const negativeTerms = terms.filter(t => t.startsWith('-'));
-      if (positiveTerms.length > 0) {
-        let positiveMatch = false;
-        for (const term of positiveTerms) {
-          if (explMatchesTerm(value, term)) { positiveMatch = true; break; }
-        }
-        if (!positiveMatch) return false;
-      }
-      for (const term of negativeTerms) {
-        if (!explMatchesTerm(value, term)) return false;
-      }
-      return true;
+      return qMatch(qParseCached(filterStr), value);
     }
 
     function explApplyFilters(key) {
       const d = EXPL[key], rows = explRows(key), cols = explCols(key);
       const search = d.search, filters = d.colFilters;
+      const searchQuery = search ? qParseCached(search) : null;
       const hasColFilters = filters.some(f => f);
       const nCols = cols.length;
       const out = [];
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
-        if (search) {
-          let hit = false;
-          for (let c = 0; c < nCols; c++) {
-            const v = row[c];
-            if (v !== null && v !== undefined && String(v).toLowerCase().indexOf(search) !== -1) { hit = true; break; }
-          }
-          if (!hit) continue;
+        if (searchQuery) {
+          if (!qMatchRow(searchQuery, row, nCols)) continue;
         }
         if (hasColFilters) {
           let ok = true;
@@ -4854,8 +4946,8 @@ Search is case sensitive.
   </div>
   <div class="tab" id="source_tab" style="display: none; height: calc(100% - 4em);">
     <div class="st-lookup-bar">
-      <input type="text" id="sourceLookup" class="st-lookup-input" placeholder="Filter / lookup lines in source…" oninput="lookupFilter(&#39;source&#39;)">
-      <button class="buttons small" onclick="document.getElementById(&#39;sourceLookup&#39;).value=&#39;&#39;; lookupFilter(&#39;source&#39;);" title="Clear">×</button>
+      <input type="text" id="sourceLookup" class="st-lookup-input" placeholder="Filter lines in source — Spain, Portugal · Spain IA · Spain, -Portugal" title="comma = or · space = and · -term excludes · "quotes" for phrases" oninput="lookupFilter(&#39;source&#39;)">
+      <span class="info-pop" tabindex="0" data-tooltip="<b>Search operators</b><br><b>Spain, Portugal</b> &mdash; comma is OR: either term.<br><b>Spain IA</b> &mdash; space is AND: both terms must appear.<br><b>Spain, -Portugal</b> &mdash; minus excludes; exclusions apply to the whole query.<br><b>&quot;Iron Age&quot;</b> &mdash; quotes keep a phrase together.<br>Groups combine: <b>Spain IA, Portugal IA</b>.">i</span>
     </div>
     <div id="datasetButtonsSource" style="display: flex; gap: 0.4em; padding: 0.4em; background: rgba(0,0,0,0.15); border-radius: 8px 8px 0 0; margin-bottom: -1px; flex-wrap: wrap;"><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(0)">akbari et al. 2026 G25</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(1)">Global25 PCA ancient</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(2)">Global25 PCA ancient averages</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(3)">Global25 PCA modern averages</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(4)">Global25 PCA modern individuals</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(5)">Moriopoulos Collection 2026 - Ancients</button><button class="buttons" style="flex:1; font-size:0.75em; text-transform:none; padding:0.3em; min-height:2em;" onclick="loadReadySet(6)">Moriopoulos Collection 2026 - Moderns</button></div>
 
@@ -4863,8 +4955,8 @@ Search is case sensitive.
   </div>
   <div class="tab" id="target_tab" style="display: none; height: calc(100% - 4em);">
     <div class="st-lookup-bar">
-      <input type="text" id="targetLookup" class="st-lookup-input" placeholder="Filter / lookup lines in target…" oninput="lookupFilter(&#39;target&#39;)">
-      <button class="buttons small" onclick="document.getElementById(&#39;targetLookup&#39;).value=&#39;&#39;; lookupFilter(&#39;target&#39;);" title="Clear">×</button>
+      <input type="text" id="targetLookup" class="st-lookup-input" placeholder="Filter lines in target — Spain, Portugal · Spain IA · Spain, -Portugal" title="comma = or · space = and · -term excludes · "quotes" for phrases" oninput="lookupFilter(&#39;target&#39;)">
+      <span class="info-pop" tabindex="0" data-tooltip="<b>Search operators</b><br><b>Spain, Portugal</b> &mdash; comma is OR: either term.<br><b>Spain IA</b> &mdash; space is AND: both terms must appear.<br><b>Spain, -Portugal</b> &mdash; minus excludes; exclusions apply to the whole query.<br><b>&quot;Iron Age&quot;</b> &mdash; quotes keep a phrase together.<br>Groups combine: <b>Spain IA, Portugal IA</b>.">i</span>
     </div>
     <textarea onchange="inputHasChanged = true" class="tabinput" id="target" spellcheck="false" placeholder="Paste data here. Comma-separated values, no header." style="height: calc(100% - 3.2em); border-radius: 0 0 8px 8px; width: 100%;" data-full-value=""></textarea>
   </div>
@@ -5162,7 +5254,8 @@ Source_2,0.0388,-0.0241,..."></textarea>
   <div class="tab" id="aadr" style="display: none; height: calc(100% - 6.6em);">
     <div class="aadr-table-wrap" id="aadrTableWrap">
       <div class="aadr-toolbar">
-        <input type="text" id="aadrSearch" class="st-lookup-input" placeholder="Search all columns…" oninput="explDebouncedFilter(&#39;aadr&#39;)">
+        <input type="text" id="aadrSearch" class="st-lookup-input" placeholder="Search all columns — Spain, Portugal · Spain IA · Spain, -Portugal" title="comma = or · space = and · -term excludes · "quotes" for phrases" oninput="explDebouncedFilter(&#39;aadr&#39;)">
+        <span class="info-pop" tabindex="0" data-tooltip="<b>Search operators</b><br><b>Spain, Portugal</b> &mdash; comma is OR: either term.<br><b>Spain IA</b> &mdash; space is AND: both terms must appear.<br><b>Spain, -Portugal</b> &mdash; minus excludes; exclusions apply to the whole query.<br><b>&quot;Iron Age&quot;</b> &mdash; quotes keep a phrase together.<br>Groups combine: <b>Spain IA, Portugal IA</b>.">i</span>
         <button class="buttons small" onclick="explClearSearch(&#39;aadr&#39;)" title="Clear search">×</button>
         <button class="buttons" id="aadrCopyAll" onclick="explCopyAll(&#39;aadr&#39;)">copy all</button>
       </div>
@@ -5179,7 +5272,8 @@ Source_2,0.0388,-0.0241,..."></textarea>
   <div class="tab" id="akbari" style="display: none; height: calc(100% - 6.6em);">
     <div class="aadr-table-wrap" id="akbTableWrap">
       <div class="aadr-toolbar">
-        <input type="text" id="akbSearch" class="st-lookup-input" placeholder="Search all columns…" oninput="explDebouncedFilter(&#39;akbari&#39;)">
+        <input type="text" id="akbSearch" class="st-lookup-input" placeholder="Search all columns — Spain, Portugal · Spain IA · Spain, -Portugal" title="comma = or · space = and · -term excludes · "quotes" for phrases" oninput="explDebouncedFilter(&#39;akbari&#39;)">
+        <span class="info-pop" tabindex="0" data-tooltip="<b>Search operators</b><br><b>Spain, Portugal</b> &mdash; comma is OR: either term.<br><b>Spain IA</b> &mdash; space is AND: both terms must appear.<br><b>Spain, -Portugal</b> &mdash; minus excludes; exclusions apply to the whole query.<br><b>&quot;Iron Age&quot;</b> &mdash; quotes keep a phrase together.<br>Groups combine: <b>Spain IA, Portugal IA</b>.">i</span>
         <button class="buttons small" onclick="explClearSearch(&#39;akbari&#39;)" title="Clear search">×</button>
         <button class="buttons" id="akbCopyAll" onclick="explCopyAll(&#39;akbari&#39;)">copy all</button>
       </div>
