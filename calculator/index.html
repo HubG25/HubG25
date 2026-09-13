@@ -22,6 +22,9 @@
   <link href="./HubG25_ Admixture JS_files/css2" rel="stylesheet">
   <script>if (!sessionStorage.getItem("_swa1") && document.referrer.indexOf(location.protocol + "//" + location.host) !== 0) { fetch("https://counter.dev/track?" + new URLSearchParams({ referrer: "https://www.admixjs.com", screen: screen.width + "x" + screen.height, user: "TheCount", utcoffset: "1" })) }; sessionStorage.setItem("_swa1", "1");</script>
   <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
 
   :root{
@@ -32,11 +35,21 @@
     --text-0:#e8ebf1;
     --text-1:#a4acbd;
     --text-2:#6b7385;
+    /* Primary accent: data and the one primary action per screen. */
     --accent:#4fb8a6;
     --accent-dim:#2f6f66;
+    --accent-soft:rgba(79,184,166,0.14);
+    /* Secondary accent: interactive state (hover, focus, current selection). */
+    --accent-2:#f0a04b;
+    --accent-2-dim:#a86a29;
+    --accent-2-soft:rgba(240,160,75,0.12);
     --danger:#c8564b;
-    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    /* One radius scale, used everywhere. */
+    --r-sm:6px;
+    --r-md:8px;
+    --r-lg:12px;
+    --mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   * {
     scrollbar-width: thin;
@@ -59,20 +72,49 @@
     background: rgba(25, 29, 37, 0.97);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    padding: 0.4235em 0.726em 0;
+    padding: 8px 12px;
     box-sizing: border-box;
     border-bottom: 1px solid var(--line);
-    box-shadow: 0 2px 16px rgba(0,0,0,0.4);
-    display: flex; flex-wrap: wrap; align-items: center; gap: 0.1815em;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
   }
   header {
-    float: none; margin-left: auto; margin-right: 0.6em;
-    text-align: right; color: var(--text-2); order: 99;
+    font-family: var(--mono); font-weight: 700; font-size: 13px;
+    letter-spacing: -0.01em; color: var(--text-0);
+    margin-right: 2px; white-space: nowrap;
   }
-  header div {
-    text-transform: uppercase; font-size: 0.55em;
-    letter-spacing: 0.08em; color: var(--accent);
+  header::before {
+    content: ""; display: inline-block; vertical-align: -1px;
+    width: 7px; height: 7px; margin-right: 7px; border-radius: 2px;
+    background: var(--accent);
   }
+  /* Tabs are grouped into three segmented controls instead of one long row. */
+  .tabgroup {
+    display: inline-flex; align-items: center; gap: 2px;
+    background: var(--bg-2); border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 3px;
+  }
+  .tabgroup-label {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-2);
+    padding: 0 7px 0 5px; user-select: none;
+  }
+  .nav-sep { width: 1px; height: 20px; background: var(--line); flex: none; }
+  /* Second row: which tab you are in, plus the global actions. */
+  .subnav {
+    position: sticky; top: 0; z-index: 6;
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 14px; box-sizing: border-box; width: 100%;
+    background: var(--bg-1); border-bottom: 1px solid var(--line);
+  }
+  #tabTitle {
+    font-family: var(--mono); font-size: 12.5px; font-weight: 600;
+    color: var(--text-0); white-space: nowrap;
+  }
+  #tabDesc {
+    font-size: 11px; color: var(--text-2);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .subnav-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; }
   a { color: inherit; text-decoration: inherit; }
   button, label {
     outline: none; border: none; margin: 0; cursor: pointer;
@@ -80,70 +122,72 @@
   }
   .tablink {
     display: inline-flex; align-items: center; gap: 0.484em;
-    text-transform: uppercase; padding: 0.726em 1.21em;
-    font-size: 0.8712em; line-height: 1.4;
-    background: transparent; border-radius: 0;
-    font-weight: 600; letter-spacing: 0.06em;
-    transition: all 0.15s ease;
-    color: var(--accent);
-    border-bottom: 2px solid var(--accent);
-    margin-bottom: -1px;
+    padding: 6px 10px; font-size: 12px; line-height: 1.3;
+    font-family: var(--mono); font-weight: 500; letter-spacing: 0;
+    text-transform: none; border-radius: var(--r-sm); border: none;
+    transition: background 0.12s ease, color 0.12s ease;
+    color: var(--accent); background: var(--accent-soft);
   }
   .inactive {
-    background: transparent; color: var(--text-2);
-    border-bottom: 2px solid transparent;
+    background: transparent; color: var(--text-1);
   }
   .inactive:focus, .inactive:hover {
-    background: rgba(79,184,166,0.06);
+    background: var(--accent-2-soft);
     color: var(--text-0);
-    border-bottom: 2px solid rgba(79,184,166,0.3);
   }
   .back-btn {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 32px; height: 32px; border-radius: 8px;
+    width: 32px; height: 32px; border-radius: var(--r-md);
     background: var(--bg-2); border: 1px solid var(--line);
     color: var(--text-2); cursor: pointer; text-decoration: none;
     transition: all 0.15s ease; margin-right: 6px; flex: none;
   }
   .back-btn:hover {
-    background: rgba(79,184,166,0.1); color: var(--accent);
-    border-color: var(--accent-dim);
+    background: var(--accent-2-soft); color: var(--accent-2);
+    border-color: var(--accent-2-dim);
   }
   .back-btn svg { width: 16px; height: 16px; }
   label { display: flex; justify-content: center; align-items: center; }
   .buttons {
-    font-size: 0.72em; box-sizing: border-box;
-    border: 1px solid var(--line); border-radius: 6px;
-    min-height: 2.6em; padding: 0.55em 0.9em; margin-bottom: 0.45em;
-    color: var(--text-0); text-transform: uppercase;
+    font-size: 0.8em; box-sizing: border-box;
+    border: 1px solid var(--line); border-radius: var(--r-sm);
+    min-height: 2.4em; padding: 0.5em 0.8em; margin-bottom: 0.4em;
+    color: var(--text-1); text-transform: none;
     background: var(--bg-2);
-    box-shadow: none; line-height: 1.2em;
-    transition: border-color .12s, background .12s;
-    font-weight: 600; letter-spacing: 0.04em;
+    box-shadow: none; line-height: 1.25em;
+    transition: border-color .12s, background .12s, color .12s;
+    font-family: var(--mono); font-weight: 500; letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
   }
   .buttons:focus, .buttons:hover {
-    background: rgba(79,184,166,0.08);
-    border-color: var(--accent-dim); color: var(--text-0);
+    background: var(--accent-2-soft);
+    border-color: var(--accent-2-dim); color: var(--text-0);
   }
   .buttons:active {
-    color: var(--accent); background: rgba(79,184,166,0.14);
+    color: var(--accent); background: var(--accent-soft);
     border-color: var(--accent);
   }
   .buttons.primary {
     background: var(--accent); border-color: var(--accent); color: #0b1613;
-    text-transform: none; letter-spacing: 0.02em;
+    letter-spacing: 0.01em; font-weight: 600;
   }
   .buttons.primary:hover { background: #5fc9b6; border-color: #5fc9b6; color: #0b1613; }
   .buttons.small { padding: 0.3em 0.55em; min-height: 0; font-size: 0.7em; }
   button:disabled { display: none; }
   .dataButtonActive, .twodistances-first { position: relative; }
-  .dataButtonActive:after, .twodistances-first:after {
+  .dataButtonActive:after {
     position: absolute; bottom: 0; left: 0; width: 100%; height: 2px;
     background: var(--accent); content: '';
   }
+  /* A pending selection is interactive state, so it takes the secondary accent. */
+  .twodistances-first:after {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 2px;
+    background: var(--accent-2); content: '';
+  }
+  .twodistances-first { border-color: var(--accent-2-dim) !important; }
   .tabinput, textarea.tabinput, #filteroutput, #cgenOutput {
     box-sizing: border-box;
-    border: 1px solid var(--line); border-radius: 8px;
+    border: 1px solid var(--line); border-radius: var(--r-md);
     margin: 0; outline: 0; padding: 0.9em;
     width: 100%; overflow: auto; resize: none;
     color: var(--text-0); font-family: var(--mono);
@@ -153,8 +197,8 @@
     transition: border-color .15s, box-shadow .15s;
   }
   .tabinput:focus, #filteroutput:focus {
-    border-color: var(--accent-dim);
-    box-shadow: 0 0 0 2px rgba(79,184,166,0.12);
+    border-color: var(--accent-2-dim);
+    box-shadow: 0 0 0 2px var(--accent-2-soft);
   }
   #data { height: calc(100% - 3em); }
   #filteroutput { height: calc(100% - 6em); min-height: 12em; font-size: 11px; }
@@ -162,7 +206,7 @@
     font-size: 0.78em; box-sizing: border-box;
     margin: 0.6em; padding: 0.55em 0.8em;
     width: calc(100% - 1.2em); cursor: pointer; display: none;
-    border-radius: 6px; border: 1px solid var(--line);
+    border-radius: var(--r-sm); border: 1px solid var(--line);
   }
   #notification::before { content: "×"; font-weight: bold; margin-right: 0.8em; }
   #multioutput { box-sizing: border-box; width: 100%; padding: 0.7em; margin-top: 0.5em; }
@@ -171,9 +215,45 @@
   .flexcontainer, .flexcontainer-nr, .flexcontainer-data {
     display: flex; width: 100%;
   }
+  .flexcontainer { gap: 12px; padding: 10px; box-sizing: border-box; }
   .flexcontainer-nr { flex-wrap: wrap; padding-top: 0.32em; }
-  .panel { flex-grow: 1; box-sizing: border-box; padding: 0.7em; }
-  .rightpanel { max-width: 30em; flex-basis: 36%; }
+  .panel { flex-grow: 1; box-sizing: border-box; padding: 12px; }
+  /* One card style, used for every result block and grouped control. */
+  .card {
+    background: var(--bg-1); border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 14px; box-sizing: border-box;
+  }
+  .outcard {
+    background: var(--bg-1); border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 14px 16px; margin-bottom: 12px;
+    box-sizing: border-box; overflow-x: auto;
+  }
+  .outcard > table { width: 100%; }
+  .ctrlgroup {
+    background: var(--bg-1); border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 10px; margin-bottom: 10px;
+  }
+  .ctrlgroup > .buttons:last-child, .ctrlgroup > div:last-child .buttons { margin-bottom: 0; }
+  .gradpick { margin: 0 0 8px; }
+  .gradpick select { margin-bottom: 6px; }
+  .gradstrip {
+    height: 10px; border-radius: 999px; border: 1px solid var(--line);
+  }
+  .gradscale {
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: 9.5px; color: var(--text-2);
+    margin-top: 3px; letter-spacing: 0.06em;
+  }
+  .ctrlgroup-title {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-2); margin-bottom: 8px;
+  }
+  .rightpanel {
+    max-width: 30em; flex-basis: 36%;
+    background: var(--bg-1); border: 1px solid var(--line);
+    border-radius: var(--r-md); align-self: flex-start;
+  }
+  .flexcontainer-data > .rightpanel, .flexcontainer-nr > .rightpanel { align-self: stretch; }
   .leftpanel { flex-shrink: 0; flex-basis: 54%; }
   .buttonmulti { min-width: 13em; margin: 0.4em 0 0 0.4em; }
   .multiclearok { min-width: initial; width: 4em; }
@@ -183,15 +263,16 @@
   .button20 { width: 19%; margin-right: 1%; }
   .input20, .input-data, input[type="text"], input[type="number"], select {
     text-align: center; background: var(--bg-2);
-    border: 1px solid var(--line); border-radius: 6px;
+    border: 1px solid var(--line); border-radius: var(--r-sm);
     color: var(--text-0); outline: none;
-    font-family: var(--sans); font-size: 12.5px;
+    font-family: var(--mono); font-size: 12px;
+    font-variant-numeric: tabular-nums;
     padding: 7px 9px;
     transition: border-color .15s, box-shadow .15s;
   }
   .input20:focus, .input-data:focus, input:focus, select:focus {
-    border-color: var(--accent-dim);
-    box-shadow: 0 0 0 2px rgba(79,184,166,0.12);
+    border-color: var(--accent-2-dim);
+    box-shadow: 0 0 0 2px var(--accent-2-soft);
   }
   select {
     -webkit-appearance: none; appearance: none; width: 100%; text-align: left;
@@ -210,14 +291,15 @@
   #distancetargets > button, #singletargets > button, #oracletargets > button, .button-data {
     text-transform: none;
   }
-  table { font-size: 0.78em; border-spacing: 0; border-collapse: collapse; }
+  table { font-size: 0.8em; border-spacing: 0; border-collapse: collapse; font-variant-numeric: tabular-nums; }
   td, th { border-bottom: 1px solid var(--line); padding: 0.4em; }
   .distances td, .distances th { text-align: right; }
   .distances td:first-child { width: 8em; }
   .distances td:nth-of-type(2), .distances th:nth-of-type(2) {
     text-align: left; padding-left: 0.7em;
   }
-  .distances th { padding-bottom: 0.7em; color: var(--accent); font-weight: 600; letter-spacing: 0.04em; }
+  .distances th { padding-bottom: 0.7em; color: var(--text-1); font-weight: 600; letter-spacing: 0; font-family: var(--mono); }
+  .distances td:first-child { font-family: var(--mono); }
   #gradoptsdiff { display: none; }
   hr { border: 0; border-top: 1px solid var(--line); margin: 0 0 1.2em 0; }
   .leftpanel hr:last-of-type, #multioutput hr:last-of-type { display: none; }
@@ -252,7 +334,7 @@
     margin: 0 0 0.55em; font-size: 0.72em; color: var(--text-1);
   }
   .mfilter select, .mfilter input.mf-val {
-    background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px;
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-sm);
     color: var(--text-0); font-family: var(--sans); font-size: 1em;
     padding: 0.35em 0.5em; max-width: 16em;
   }
@@ -322,7 +404,7 @@
   }
   #globalInfoTooltip {
     display: none; position: fixed; z-index: 9999; width: 230px; max-width: 70vw;
-    background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px;
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-md);
     padding: 8px 10px; font-size: 10.5px; font-weight: 400; line-height: 1.5;
     color: var(--text-1); text-transform: none; letter-spacing: normal;
     box-shadow: 0 6px 20px rgba(0,0,0,0.4); white-space: normal; pointer-events: none;
@@ -333,7 +415,7 @@
   .cgen-mode-row { margin-bottom: 8px; }
   .cgen-list {
     margin-top: 10px; max-height: 220px; overflow-y: auto;
-    border: 1px solid var(--line); border-radius: 8px; background: var(--bg-1);
+    border: 1px solid var(--line); border-radius: var(--r-md); background: var(--bg-1);
   }
   .cgen-row {
     display: flex; align-items: center; gap: 8px;
@@ -358,12 +440,12 @@
   .cgen-w {
     width: 68px; text-align: center; padding: 4px 6px; font-size: 12px;
     background: var(--bg-2) !important; border: 1px solid var(--line) !important;
-    border-radius: 6px !important; color: var(--text-0) !important;
+    border-radius: var(--r-sm) !important; color: var(--text-0) !important;
     font-family: var(--mono) !important;
   }
   .cgen-row.is-sub .cgen-name { color: var(--text-1); }
   .adcbox {
-    box-sizing: border-box; border: 1px solid var(--line); border-radius: 6px;
+    box-sizing: border-box; border: 1px solid var(--line); border-radius: var(--r-sm);
     background: var(--bg-2); padding: 0.5em 0.7em 0.6em; margin-bottom: 0.45em;
     transition: border-color .12s;
   }
@@ -418,7 +500,7 @@
     display: none; position: absolute; left: 0; right: 0; top: 100%;
     z-index: 60; margin-top: 4px; max-height: 260px; overflow-y: auto;
     background: var(--bg-2); border: 1px solid var(--line);
-    border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    border-radius: var(--r-md); box-shadow: 0 8px 24px rgba(0,0,0,0.45);
   }
   .cgen-suggest-item {
     padding: 7px 10px; font-size: 12px; color: var(--text-0);
@@ -435,8 +517,9 @@
   }
   #theme-toggle {
     display: flex; align-items: center; gap: 0.45em;
-    margin: 0.35em 0.5em 0 0; cursor: pointer; user-select: none;
-    color: var(--text-2); font-size: 0.72em; font-weight: 500; letter-spacing: 0.04em;
+    margin: 0; cursor: pointer; user-select: none;
+    color: var(--text-2); font-size: 0.75em; font-weight: 500; letter-spacing: 0;
+    font-family: var(--mono);
   }
   #theme-toggle .toggle-track {
     position: relative; width: 2.6em; height: 1.4em;
@@ -459,6 +542,9 @@
     --bg-0: #e8eaef; --bg-1: #f4f5f7; --bg-2: #ffffff;
     --line: #c8cdd6; --text-0: #1c2128; --text-1: #4a5260; --text-2: #6b7385;
     --accent: #2f8f7f; --accent-dim: #247066;
+    --accent-soft: rgba(47,143,127,0.14);
+    --accent-2: #c97b1f; --accent-2-dim: #a8641a;
+    --accent-2-soft: rgba(201,123,31,0.13);
   }
   body.light-theme nav {
     background: rgba(244,245,247,0.97); border-bottom: 1px solid var(--line);
@@ -466,7 +552,9 @@
   body.light-theme .tabinput, body.light-theme #filteroutput {
     background: #fff; color: #1c2128;
   }
-  body.light-theme .buttons { background: #fff; color: #1c2128; }
+  body.light-theme .buttons { background: #fff; color: #3b424e; }
+  body.light-theme .subnav { background: #f4f5f7; }
+  body.light-theme .tabgroup { background: #fff; }
   @media only screen and (max-width: 639px) {
     .flexcontainer, .flexcontainer-data { flex-direction: column-reverse; }
     .rightpanel { max-width: none; }
@@ -486,7 +574,7 @@
     flex: 1; text-align: left !important;
     background: var(--bg-2) !important;
     border: 1px solid var(--line) !important;
-    border-radius: 6px !important;
+    border-radius: var(--r-sm) !important;
     color: var(--text-0) !important;
     padding: 8px 10px !important;
     font-size: 12.5px !important;
@@ -497,7 +585,7 @@
     text-align: left !important;
     background: var(--bg-2) !important;
     border: 1px solid var(--line) !important;
-    border-radius: 6px !important;
+    border-radius: var(--r-sm) !important;
     color: var(--text-0) !important;
     padding: 8px 10px !important;
     font-size: 12.5px !important;
@@ -508,7 +596,7 @@
     min-height: 88px;
     background: var(--bg-2) !important;
     border: 1px solid var(--line) !important;
-    border-radius: 8px !important;
+    border-radius: var(--r-md) !important;
     color: var(--text-0) !important;
     padding: 10px 12px !important;
     font-size: 11.5px !important;
@@ -526,7 +614,7 @@
   .pie-wrap {
     display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px;
     margin: 12px 0 8px; padding: 12px;
-    background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px;
+    background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--r-lg);
   }
   .pie-svg { flex: none; border-radius: 50%; }
   .pie-legend {
@@ -552,7 +640,7 @@
   /* ---------- AADR v66 Explorer ---------- */
   .aadr-table-wrap {
     display: flex; flex-direction: column; height: 100%;
-    border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden;
   }
   .aadr-toolbar {
     display: flex; align-items: center; gap: 0.4em;
@@ -612,23 +700,21 @@
 
   /* ---------- Donate button + modal ---------- */
   #donateBtn {
-    order: 100;
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     background: var(--accent); border: 1px solid var(--accent); color: #0b1613;
-    font-size: 0.75em; font-weight: 700; letter-spacing: 0.02em;
-    padding: 0.6em 1em; border-radius: 6px; cursor: pointer;
-    text-transform: none; margin: 0 0.7em 0 0; white-space: nowrap;
+    font-family: var(--mono); font-size: 0.75em; font-weight: 600; letter-spacing: 0;
+    padding: 0.5em 0.9em; border-radius: var(--r-sm); cursor: pointer;
+    text-transform: none; margin: 0; white-space: nowrap;
   }
   #donateBtn:hover { background: #5fc9b6; border-color: #5fc9b6; }
   #backToMainBtn {
-    order: 98;
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    background: var(--bg-2); border: 1px solid var(--line); color: var(--text-0);
-    font-size: 0.75em; font-weight: 700; letter-spacing: 0.02em;
-    padding: 0.6em 1em; border-radius: 6px; cursor: pointer;
-    text-transform: none; margin: 0 0.6em; white-space: nowrap;
+    background: var(--bg-2); border: 1px solid var(--line); color: var(--text-1);
+    font-family: var(--mono); font-size: 0.75em; font-weight: 500; letter-spacing: 0;
+    padding: 0.5em 0.9em; border-radius: var(--r-sm); cursor: pointer;
+    text-transform: none; margin: 0; white-space: nowrap;
   }
-  #backToMainBtn:hover { background: rgba(79,184,166,0.08); border-color: var(--accent-dim); }
+  #backToMainBtn:hover { background: var(--accent-2-soft); border-color: var(--accent-2-dim); }
   #donateOverlay {
     position: fixed; inset: 0; background: rgba(8,10,14,0.6);
     backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
@@ -637,7 +723,7 @@
   #donateOverlay.open { display: flex; }
   #donateModal {
     width: 360px; max-width: calc(100vw - 32px);
-    background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px;
+    background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--r-lg);
     padding: 20px; box-shadow: 0 12px 40px rgba(0,0,0,0.5);
   }
   #donateModal .donate-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 4px; }
@@ -648,10 +734,10 @@
   .donate-row { margin-bottom: 12px; }
   .donate-row:last-child { margin-bottom: 0; }
   .donate-row .donate-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-2); margin-bottom: 5px; font-weight: 700; }
-  .donate-addr-row { display: flex; align-items: center; gap: 6px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; padding: 8px 9px; }
+  .donate-addr-row { display: flex; align-items: center; gap: 6px; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 9px; }
   .donate-addr-row code { flex: 1; font-family: var(--mono); font-size: 11px; color: var(--text-0); word-break: break-all; line-height: 1.4; }
   .donate-copy-btn {
-    flex: none; padding: 5px 9px; font-size: 10.5px; border-radius: 6px;
+    flex: none; padding: 5px 9px; font-size: 10.5px; border-radius: var(--r-sm);
     border: 1px solid var(--line); background: transparent; color: var(--text-0); cursor: pointer;
     text-transform: none; font-family: var(--sans);
   }
@@ -1057,6 +1143,104 @@
       return Math.floor(Math.random() * (max - min)) + min;
     }
 
+    /* ---- result gradients ----
+       Distance and Oracle both colour their result cells from a hue on the old
+       Vahaduo scale (120 = nearest, 0 = furthest). That hue is converted here to
+       a 0..1 position and looked up in the selected palette, so every existing
+       threshold and per-mode formula keeps working untouched. */
+    const GRADIENTS = {
+      vahaduo: { label: 'Vahaduo (green to blue)', hsl: true },
+      spectral: {
+        label: 'Spectral',
+        stops: ['#9e0142','#d53e4f','#f46d43','#fdae61','#fee08b','#ffffbf',
+                '#e6f598','#abdda4','#66c2a5','#3288bd','#5e4fa2']
+      },
+      viridis: {
+        label: 'Viridis',
+        stops: ['#fde725','#b5de2b','#6ece58','#35b779','#1f9e89','#26828e',
+                '#31688e','#3e4989','#482878','#440154']
+      }
+    };
+    let gradPalette = 'vahaduo', oracleGradPalette = 'vahaduo';
+
+    function gradHexRgb(hex) {
+      return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+    }
+
+    /* Vahaduo runs the hue wheel backwards across the whole from/to range:
+       green at "from", through yellow, red and magenta, to blue at "to" and
+       beyond. Saturation and lightness stay at the muted 70% / 48%. */
+    function gradVahaduoRgb(t) {
+      return gradHslRgb(120 - 240 * t, 0.7, 0.48);
+    }
+
+    function gradHslRgb(hueDeg, sat, light) {
+      if (!isFinite(hueDeg)) hueDeg = 0;
+      const h = ((((hueDeg % 360) + 360) % 360)) / 60;
+      const c = (1 - Math.abs(2*light - 1)) * sat;
+      const x = c * (1 - Math.abs((h % 2) - 1));
+      const m = light - c/2;
+      let r = 0, g = 0, b = 0;
+      if (h < 1)      { r = c; g = x; }
+      else if (h < 2) { r = x; g = c; }
+      else if (h < 3) { g = c; b = x; }
+      else if (h < 4) { g = x; b = c; }
+      else if (h < 5) { r = x; b = c; }
+      else            { r = c; b = x; }
+      return [Math.round((r+m)*255), Math.round((g+m)*255), Math.round((b+m)*255)];
+    }
+
+    function gradRgb(name, t) {
+      const g = GRADIENTS[name] || GRADIENTS.spectral;
+      t = (!isFinite(t) || t < 0) ? 0 : (t > 1 ? 1 : t);
+      if (g.hsl) return gradVahaduoRgb(t);
+      const pos = t * (g.stops.length - 1);
+      const i = Math.min(g.stops.length - 2, Math.floor(pos));
+      const f = pos - i;
+      const a = gradHexRgb(g.stops[i]), b = gradHexRgb(g.stops[i+1]);
+      return [Math.round(a[0] + (b[0]-a[0])*f),
+              Math.round(a[1] + (b[1]-a[1])*f),
+              Math.round(a[2] + (b[2]-a[2])*f)];
+    }
+
+    /* Text flips to dark on the pale middle of a palette so cells stay readable. */
+    function gradCellStyle(name, t) {
+      const c = gradRgb(name, t);
+      const lum = (0.299*c[0] + 0.587*c[1] + 0.114*c[2]) / 255;
+      return ' style="color:' + (lum > 0.5 ? '#10141a' : '#f2f5f9') +
+             ';background-color:rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')"';
+    }
+
+    function gradAttrFromHue(hue, which) {
+      const t = (120 - Number(hue)) / 120;
+      return gradCellStyle(which === 'oracle' ? oracleGradPalette : gradPalette, t);
+    }
+
+    function gradCssStrip(name) {
+      const steps = [];
+      for (let i = 0; i <= 10; i++) {
+        const c = gradRgb(name, i/10);
+        steps.push('rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ') ' + (i*10) + '%');
+      }
+      return 'linear-gradient(90deg,' + steps.join(',') + ')';
+    }
+
+    function gradSetPalette(which, value) {
+      if (which === 'oracle') oracleGradPalette = value; else gradPalette = value;
+      gradUpdatePreview(which);
+    }
+
+    function gradUpdatePreview(which) {
+      const el = document.getElementById(which === 'oracle' ? 'oracleGradPreview' : 'gradPreview');
+      if (el) el.style.background = gradCssStrip(which === 'oracle' ? oracleGradPalette : gradPalette);
+    }
+
+    function gradPaletteOptionsHtml() {
+      return Object.keys(GRADIENTS).map(function (k) {
+        return '<option value="' + k + '">' + GRADIENTS[k].label + '</option>';
+      }).join('');
+    }
+
     function subArray(arr1, arr2) {
       const subtracted = arr1.map(function (elmnt, index) {
         return elmnt - arr2[index];
@@ -1164,43 +1348,35 @@
       function upperDecorator(distance) {
         let output = "";
         if (addGradient) {
-          output += ' style="color:black;background-color:hsl(';
+          let hue;
           if (distMode == 1) {
             let distAbs = Math.abs(distance);
-            if (distAbs < gradFrom) {
-              output += 120;
-            } else if (distAbs > gradTo) {
-              output += 0;
-            } else {
-              output += 120 - (((distAbs - gradFrom) / (gradTo - gradFrom)) * 120);
-            }
+            hue = distAbs < gradFrom
+              ? 120
+              : (distAbs > gradTo ? 0 : 120 - (((distAbs - gradFrom) / (gradTo - gradFrom)) * 120));
           } else if (distMode == 2) {
-            output += (120 - distance * 120);
+            hue = 120 - distance * 120;
           } else {
-            output += 120 - (distance * 120);
+            hue = 120 - (distance * 120);
           }
-          output += ', 70%, 48%)"';
+          output += gradAttrFromHue(hue, 'dist');
         }
         return output + ">" + distance.toFixed(8);
       }
       function lowerDecorator(distance) {
         let output = "";
         if (addGradient) {
-          output += ' style="color:black;background-color:hsl(';
+          let hue;
           if (distMode == 1) {
-            if (distance < gradFrom) {
-              output += 120;
-            } else if (distance > gradTo) {
-              output += 0;
-            } else {
-              output += 120 - (((distance - gradFrom) / (gradTo - gradFrom)) * 120);
-            }
+            hue = distance < gradFrom
+              ? 120
+              : (distance > gradTo ? 0 : 120 - (((distance - gradFrom) / (gradTo - gradFrom)) * 120));
           } else if (distMode == 2) {
-            output += (0 + 1 / distance * 120);
+            hue = 1 / distance * 120;
           } else {
-            output += 120 - (distance * 120);
+            hue = 120 - (distance * 120);
           }
-          output += ', 70%, 48%)"';
+          output += gradAttrFromHue(hue, 'dist');
         }
         return output + ">" + distance.toFixed(8);
       }
@@ -1275,8 +1451,7 @@
     }
 
     function distances(targetId) {
-      let i, output = "", resultsNum, getDistance, distanceCurrent,
-        gradStyle1 = "", gradStyle2 = "", gradHSL = "",
+      let i, output = "", resultsNum, getDistance, distanceCurrent, gradHSL = 0,
         distMaxOut = document.getElementById("distmaxout").value;
       const target = targetArray[targetId].slice(),
         distances = Array(sourceNum).fill([]),
@@ -1300,25 +1475,17 @@
       if (resultsNum < distMaxOut) {
         distMaxOut = resultsNum;
       }
-      if (addGradient) {
-        gradStyle1 = ' style="color:black;background-color:hsl(';
-        gradStyle2 = ', 70%, 48%)"';
-      }
       output += '<table class="distances"><tr><th>Distance&nbsp;to:</th><th>' + target[0] + "</th>";
       const listedNames = [];
       for (i = 0; i < distMaxOut; i++) {
         distanceCurrent = distances[i][1];
         listedNames.push(distances[i][0]);
         if (addGradient) {
-          if (distanceCurrent < gradFrom) {
-            gradHSL = 120;
-          } else if (distanceCurrent > gradTo) {
-            gradHSL = 0;
-          } else {
-            gradHSL = 120 - (((distanceCurrent - gradFrom) / (gradTo - gradFrom)) * 120);
-          }
+          gradHSL = distanceCurrent < gradFrom
+            ? 120
+            : (distanceCurrent > gradTo ? 0 : 120 - (((distanceCurrent - gradFrom) / (gradTo - gradFrom)) * 120));
         }
-        output += "<tr><td" + gradStyle1 + gradHSL + gradStyle2 + ">" + distanceCurrent.toFixed(8) + "</td><td>" + distances[i][0] + "</td></tr>";
+        output += "<tr><td" + (addGradient ? gradAttrFromHue(gradHSL, 'dist') : "") + ">" + distanceCurrent.toFixed(8) + "</td><td>" + distances[i][0] + "</td></tr>";
       }
       output += "</table>" + distCopyButtonHtml(listedNames);
       printOutput(output, "distanceoutput");
@@ -1627,8 +1794,7 @@
       let resultsNum = distances.length;
       if (resultsNum < distMaxOut) distMaxOut = resultsNum;
 
-      let gradStyle1 = "", gradStyle2 = "", gradHSL = "";
-      if (oracleAddGradient) { gradStyle1 = ' style="color:black;background-color:hsl('; gradStyle2 = ', 70%, 48%)"'; }
+      let gradHSL = 0;
 
       let modeTitle = (oracleMode === 0) ? "2-way" : (oracleMode === 1) ? "3-way" : "4-way";
       output += '<table class="distances"><tr><th>Distance&nbsp;to (' + modeTitle + '):</th><th>' + targetArray[targetId][0] + "</th>";
@@ -1636,11 +1802,11 @@
         if (i >= distances.length) break;
         let distanceCurrent = distances[i][1];
         if (oracleAddGradient) {
-          if (distanceCurrent < gradFrom) gradHSL = 120;
-          else if (distanceCurrent > gradTo) gradHSL = 0;
-          else gradHSL = 120 - (((distanceCurrent - gradFrom) / (gradTo - gradFrom)) * 120);
+          gradHSL = distanceCurrent < gradFrom
+            ? 120
+            : (distanceCurrent > gradTo ? 0 : 120 - (((distanceCurrent - gradFrom) / (gradTo - gradFrom)) * 120));
         }
-        output += "<tr><td" + gradStyle1 + gradHSL + gradStyle2 + ">" + distanceCurrent.toFixed(8) + "</td><td>" + distances[i][0] + "</td></tr>";
+        output += "<tr><td" + (oracleAddGradient ? gradAttrFromHue(gradHSL, 'oracle') : "") + ">" + distanceCurrent.toFixed(8) + "</td><td>" + distances[i][0] + "</td></tr>";
       }
       output += "</table>";
       printOutput(output, "oracleoutput");
@@ -2630,7 +2796,7 @@
 
     function printOutput(what, where) {
       const output = document.getElementById(where);
-      output.innerHTML = what + "<br><hr>" + output.innerHTML;
+      output.innerHTML = '<div class="outcard">' + what + '</div>' + output.innerHTML;
     }
 
     function restoreLookupFull(which) {
@@ -2765,6 +2931,21 @@
       }
     }
 
+    /* Title and one-line description shown in the sub-row under the tab bar. */
+    const TAB_META = {
+      data: ['Data', 'Load a dataset, or paste and filter your own.'],
+      source_tab: ['Source', 'Populations used as the reference set for every model.'],
+      target_tab: ['Target', 'Populations or samples being modelled.'],
+      customgen: ['Custom gen', 'Build ghost populations and sample-size weighted averages.'],
+      distance: ['Distance', 'Euclidean distance from each target to every source.'],
+      oracle: ['Oracle', 'Best 2-, 3- or 4-way combinations of sources per target.'],
+      single: ['Single admixture', 'Monte Carlo fit of one target against all sources.'],
+      multi: ['Multi admixture', 'The same fit run across every target in one table.'],
+      stability: ['Stability', 'NNLS fit with bootstrap and jackknife error on each source.'],
+      aadr: ['AADR v66', 'Browse and filter the AADR v66 sample table.'],
+      akbari: ['Akbari 2026', 'Browse and filter the Akbari 2026 sample table.']
+    };
+
     function openTab(tabid, button) {
       let i, n;
       const tabs = document.getElementsByClassName("tab"),
@@ -2786,6 +2967,11 @@
         document.getElementById("target").scrollTop = 0;
       }
       button.classList.remove("inactive");
+      const meta = TAB_META[tabid];
+      if (meta) {
+        document.getElementById("tabTitle").textContent = meta[0];
+        document.getElementById("tabDesc").textContent = meta[1];
+      }
       if (tabid == "data") {
         if (af == false) {
           document.body.addEventListener("keydown", autofocus);
@@ -3899,7 +4085,7 @@
                 <td style="color:${stabZColor(r.Z[j])};font-weight:700;">${isFinite(r.Z[j]) ? r.Z[j].toFixed(2) : '∞'}</td>
               </tr>`).join('');
       return `
-      <div class="stab-block" style="border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:16px;background:var(--bg-1);">
+      <div class="stab-block card" style="margin-bottom:14px;">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
           <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text-0);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${stabEscape(r.targetLabel)}">${stabEscape(r.targetLabel)}</span>
           <span style="font-size:11px;color:var(--text-2);">${r.reps} reps · ${r.sourceLabels.length} sources</span>
@@ -3930,7 +4116,7 @@
             </tbody>
           </table>
         </div>
-        <div style="background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:16px;margin-top:14px;max-width:720px;">
+        <div style="background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-md);padding:16px;margin-top:14px;max-width:720px;">
           <canvas id="stabChartCanvas${k}" width="672" height="380" style="width:100%;max-height:420px;display:block;"></canvas>
           <div id="stabChartLegend${k}" class="pie-legend" style="margin-top:12px;max-height:none;"></div>
         </div>
@@ -4080,6 +4266,13 @@
 
     function initialize() {
       document.getElementById("defaulttab").click();
+      ['dist', 'oracle'].forEach(function (which) {
+        const sel = document.getElementById(which === 'oracle' ? 'oracleGradPaletteSelect' : 'gradPaletteSelect');
+        if (!sel) return;
+        sel.innerHTML = gradPaletteOptionsHtml();
+        sel.value = which === 'oracle' ? oracleGradPalette : gradPalette;
+        gradUpdatePreview(which);
+      });
       discoverDatasets();
       setDistCol("single", document.getElementById("adcSlider").value);
       setDistCol("multi", document.getElementById("adcmSlider").value);
@@ -4535,28 +4728,45 @@
 <body>
   <div id="globalInfoTooltip" style="display: none;"></div>
   <nav>
-    <div id="theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark mode">
-      <span id="theme-label">🌙</span>
-      <div class="toggle-track">
-        <div class="toggle-thumb"></div>
-      </div>
-      <span>☀</span>
+    <header><a href="https://hubg25.github.io/HubG25/" title="HubG25">HubG25</a></header>
+    <div class="tabgroup">
+      <span class="tabgroup-label">Data</span>
+      <button class="tablink inactive" id="defaulttab" onclick="openTab(&#39;data&#39;, this)">Data</button><!--
+      --><button class="tablink inactive" onclick="openTab(&#39;source_tab&#39;, this)">Source</button><!--
+      --><button class="tablink inactive" onclick="openTab(&#39;target_tab&#39;, this)">Target</button><!--
+      --><button class="tablink inactive" onclick="openTab(&#39;customgen&#39;, this);processInput();cgenRefreshPopList()">Custom gen</button>
     </div>
-    <header><a href="https://casperhub.dev/" target="_blank" title="HubG25">HubG25</a></header>
-    <button class="tablink inactive" id="defaulttab" onclick="openTab(&#39;data&#39;, this)">data</button><!--
-    --><button class="tablink inactive" onclick="openTab(&#39;source_tab&#39;, this)">source</button><!--
-    --><button class="tablink inactive" onclick="openTab(&#39;target_tab&#39;, this)">target</button><!--
-    --><button class="tablink inactive" onclick="openTab(&#39;distance&#39;, this);processInput()">distance</button><!--
-    --><button class="tablink inactive" onclick="openTab(&#39;oracle&#39;, this);processInput()">oracle</button><!--
-    --><button class="tablink inactive" onclick="openTab(&#39;single&#39;, this);processInput()">single</button><!--
-    --><button class="tablink inactive" onclick="openTab(&#39;multi&#39;, this);processInput()">multi</button><!--
-    --><button class="tablink inactive" onclick="openTab(&#39;customgen&#39;, this);processInput();cgenRefreshPopList()">custom gen</button><!--
-    --><button class="tablink" onclick="openTab(&#39;stability&#39;, this)">stability</button><!--
-    --><button class="tablink inactive" onclick="openTab(&#39;aadr&#39;, this);explInit(&#39;aadr&#39;);">AADR v66 Explorer</button><!--
-        --><button class="tablink inactive" onclick="openTab(&#39;akbari&#39;, this);explInit(&#39;akbari&#39;);">Akbari 2026 Explorer</button><!--
-    --><button id="backToMainBtn" onclick="window.location.href=&#39;https://hubg25.github.io/HubG25/&#39;">← Back to main screen</button><!--
-    --><button id="donateBtn">♥ Donate</button>
+    <span class="nav-sep"></span>
+    <div class="tabgroup">
+      <span class="tabgroup-label">Model</span>
+      <button class="tablink inactive" onclick="openTab(&#39;distance&#39;, this);processInput()">Distance</button><!--
+      --><button class="tablink inactive" onclick="openTab(&#39;oracle&#39;, this);processInput()">Oracle</button><!--
+      --><button class="tablink inactive" onclick="openTab(&#39;single&#39;, this);processInput()">Single</button><!--
+      --><button class="tablink inactive" onclick="openTab(&#39;multi&#39;, this);processInput()">Multi</button><!--
+      --><button class="tablink inactive" onclick="openTab(&#39;stability&#39;, this)">Stability</button>
+    </div>
+    <span class="nav-sep"></span>
+    <div class="tabgroup">
+      <span class="tabgroup-label">Explore</span>
+      <button class="tablink inactive" onclick="openTab(&#39;aadr&#39;, this);explInit(&#39;aadr&#39;);">AADR v66</button><!--
+      --><button class="tablink inactive" onclick="openTab(&#39;akbari&#39;, this);explInit(&#39;akbari&#39;);">Akbari 2026</button>
+    </div>
   </nav>
+  <div class="subnav">
+    <span id="tabTitle">Data</span>
+    <span id="tabDesc">Load a dataset, or paste and filter your own.</span>
+    <div class="subnav-actions">
+      <div id="theme-toggle" onclick="toggleTheme()" title="Toggle Light/Dark mode">
+        <span id="theme-label">🌙</span>
+        <div class="toggle-track">
+          <div class="toggle-thumb"></div>
+        </div>
+        <span>☀</span>
+      </div>
+      <button id="backToMainBtn" onclick="window.location.href=&#39;https://hubg25.github.io/HubG25/&#39;">← Back to main screen</button><!--
+      --><button id="donateBtn">♥ Donate</button>
+    </div>
+  </div>
   <div id="donateOverlay">
     <div id="donateModal" role="dialog" aria-modal="true" aria-labelledby="donateModalTitle">
       <div class="donate-head">
@@ -4672,6 +4882,12 @@ Search is case sensitive.
         --><input spellcheck="false" class="buttons input20" id="distmaxout" value="25" onblur="validateDistMaxOut(this)">
         <button class="buttons button100" onclick="toggleOptions(&#39;addGradient&#39;, this)">add&nbsp;gradient&nbsp;-&nbsp;yes</button>
         <div>
+          <div class="gradpick">
+            <div class="ctrlgroup-title">gradient palette</div>
+            <select id="gradPaletteSelect" onchange="gradSetPalette(&#39;dist&#39;, this.value)"></select>
+            <div class="gradstrip" id="gradPreview"></div>
+            <div class="gradscale"><span>near</span><span>far</span></div>
+          </div>
           <div id="gradopts">
             <button class="buttons button80" onclick="this.nextElementSibling.focus()">gradient&nbsp;from:</button><!--
             --><input spellcheck="false" class="buttons input20" id="gradfrom" value="0" onblur="validateGradFromTo(this)">
@@ -4718,6 +4934,12 @@ Search is case sensitive.
         --><input spellcheck="false" class="buttons input20" id="oraclemaxout" value="25" onblur="validateDistMaxOut(this)">
         <button class="buttons button100" onclick="toggleOptions(&#39;oracleAddGradient&#39;, this)">add&nbsp;gradient&nbsp;-&nbsp;yes</button>
         <div>
+          <div class="gradpick">
+            <div class="ctrlgroup-title">gradient palette</div>
+            <select id="oracleGradPaletteSelect" onchange="gradSetPalette(&#39;oracle&#39;, this.value)"></select>
+            <div class="gradstrip" id="oracleGradPreview"></div>
+            <div class="gradscale"><span>near</span><span>far</span></div>
+          </div>
           <div id="oraclegradopts">
             <button class="buttons button80" onclick="this.nextElementSibling.focus()">gradient&nbsp;from:</button><!--
             --><input spellcheck="false" class="buttons input20" id="oraclegradfrom" value="0" onblur="validateGradFromTo(this)">
@@ -4937,7 +5159,7 @@ Source_2,0.0388,-0.0241,..."></textarea>
     </div>
     <div id="multioutput"></div>
   </div>
-  <div class="tab" id="aadr" style="display: none; height: calc(100% - 4em);">
+  <div class="tab" id="aadr" style="display: none; height: calc(100% - 6.6em);">
     <div class="aadr-table-wrap" id="aadrTableWrap">
       <div class="aadr-toolbar">
         <input type="text" id="aadrSearch" class="st-lookup-input" placeholder="Search all columns…" oninput="explDebouncedFilter(&#39;aadr&#39;)">
@@ -4954,7 +5176,7 @@ Source_2,0.0388,-0.0241,..."></textarea>
       <div class="aadr-status" id="aadrStatus"></div>
     </div>
   </div>
-  <div class="tab" id="akbari" style="display: none; height: calc(100% - 4em);">
+  <div class="tab" id="akbari" style="display: none; height: calc(100% - 6.6em);">
     <div class="aadr-table-wrap" id="akbTableWrap">
       <div class="aadr-toolbar">
         <input type="text" id="akbSearch" class="st-lookup-input" placeholder="Search all columns…" oninput="explDebouncedFilter(&#39;akbari&#39;)">
