@@ -3478,8 +3478,10 @@
     
     /* ===== Stability Checker (NNLS + bootstrap) ===== */
     let stabLoadedSources = [];
-    let stabLastResults = null;
+    let stabLoadedTargets = [];
+    let stabResults = [];
     let stabChartMode = 'bar';
+    let stabBusy = false;
 
     function stabParseLine(line) {
       const parts = line.split(',').map(s => s.trim());
@@ -3494,20 +3496,24 @@
       return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
-    function stabLoadSources() {
-      const lines = document.getElementById('stabSourcesInput').value.split('\n').map(l => l.trim()).filter(l => l.length);
+    function stabParseBlock(raw) {
+      const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length);
       const parsed = [], bad = [];
       for (const line of lines) {
         const p = stabParseLine(line);
         if (p) parsed.push(p); else bad.push(line);
       }
-      const finalSources = [];
-      const used = new Set();
+      const out = [], used = new Set();
       for (const p of parsed) {
         if (used.has(p.label)) continue;
         used.add(p.label);
-        finalSources.push(p);
+        out.push(p);
       }
+      return { list: out, bad };
+    }
+
+    function stabLoadSources() {
+      const { list: finalSources, bad } = stabParseBlock(document.getElementById('stabSourcesInput').value);
       const previouslyChecked = new Set(
         Array.from(document.querySelectorAll('.stab-src-check:checked')).map(el => el.value)
       );
@@ -3524,6 +3530,45 @@
       if (bad.length) parts.push(`${bad.length} malformed skipped`);
       st.textContent = parts.join(' · ') + '. Uncheck any to exclude.';
       st.style.color = finalSources.length >= 2 ? 'var(--accent)' : 'var(--danger)';
+      return finalSources.length;
+    }
+
+    function stabLoadTargets() {
+      const { list: finalTargets, bad } = stabParseBlock(document.getElementById('stabTargetInput').value);
+      stabLoadedTargets = finalTargets;
+      const kept = new Set(finalTargets.map(t => t.label));
+      stabResults = stabResults.filter(r => kept.has(r.targetLabel));
+      stabRenderTargetList();
+      const st = document.getElementById('stabTargetStatus');
+      const parts = [`${finalTargets.length} target${finalTargets.length===1?'':'s'} loaded`];
+      if (bad.length) parts.push(`${bad.length} malformed skipped`);
+      st.textContent = parts.join(' · ') + '. Run all, or run any single target.';
+      st.style.color = finalTargets.length ? 'var(--accent)' : 'var(--danger)';
+      stabRenderResults();
+      return finalTargets.length;
+    }
+
+    function stabRenderTargetList() {
+      const list = document.getElementById('stabTargetList');
+      if (!list) return;
+      const done = new Set(stabResults.map(r => r.targetLabel));
+      list.innerHTML = stabLoadedTargets.map((t, i) =>
+        `<div class="cgen-row">` +
+          `<span class="cgen-name" title="${stabEscape(t.label)}">${stabEscape(t.label)}</span>` +
+          `<span class="cgen-meta" id="stabTgtState${i}">${done.has(t.label) ? 'done' : ''}</span>` +
+          `<button class="buttons small stab-tgt-run" style="margin:0;" onclick="stabRunTarget(${i})" title="Run this target only">Run</button>` +
+        `</div>`
+      ).join('');
+      list.style.display = stabLoadedTargets.length ? 'block' : 'none';
+      const btn = document.getElementById('stabRunAllBtn');
+      if (btn) btn.textContent = stabLoadedTargets.length > 1 ? `Run all (${stabLoadedTargets.length} targets)` : 'Run analysis';
+    }
+
+    function stabSetTargetState(i, text, isError) {
+      const el = document.getElementById('stabTgtState' + i);
+      if (!el) return;
+      el.textContent = text;
+      el.style.color = isError ? 'var(--danger)' : 'var(--text-2)';
     }
 
     function stabSolveSymmetric(M, v) {
@@ -3637,79 +3682,180 @@
       return Math.sqrt(v);
     }
 
-    function stabRun() {
-      const tLine = document.getElementById('stabTargetInput').value.trim().split('\n').map(l=>l.trim()).filter(l=>l.length)[0];
-      const target = tLine ? stabParseLine(tLine) : null;
-      if (!stabLoadedSources.length && document.getElementById('stabSourcesInput').value.trim()) {
-        stabLoadSources();
+    /* Core fit for one target against one set of sources. */
+    function stabAnalyze(target, sources, reps) {
+      const sourceLabels = sources.map(s => s.label);
+      const COORDS = {};
+      COORDS[target.label] = target.vec;
+      sources.forEach(s => { COORDS[s.label] = s.vec; });
+      const targetVec = target.vec;
+      const DIM = targetVec.length;
+      const buildRows = (dims) => dims.map(d => sourceLabels.map(l => COORDS[l][d]));
+      const allDimIdx = Array.from({length:DIM}, (_,i) => i);
+
+      const baselineFit = stabComputeBaseline(targetVec, buildRows(allDimIdx));
+      const baseline = baselineFit.normalized;
+      const distance = baselineFit.distance;
+
+      const rng = stabMulberry32(42);
+      const bootResults = [];
+      for (let b=0; b<reps; b++) {
+        const idx = [];
+        for (let i=0;i<DIM;i++) idx.push(Math.floor(rng()*DIM));
+        bootResults.push(stabFitNormalized(idx.map(i => targetVec[i]), buildRows(idx)));
       }
-      const checkedLabels = new Set(
+      const bootMean = sourceLabels.map((_,j) => stabAvg(bootResults.map(r=>r[j])));
+      const bootSD = sourceLabels.map((_,j) => stabStdev(bootResults.map(r=>r[j]), bootMean[j]));
+
+      const jackFits = [];
+      for (let i=0;i<DIM;i++) {
+        const idx = allDimIdx.filter(d => d !== i);
+        jackFits.push(stabFitNormalized(idx.map(d => targetVec[d]), buildRows(idx)));
+      }
+      const jackMean = sourceLabels.map((_,j) => stabAvg(jackFits.map(r=>r[j])));
+      const jackSD = sourceLabels.map((_,j) => {
+        const varSum = jackFits.reduce((s,r) => s + Math.pow(r[j]-jackMean[j],2), 0);
+        return Math.sqrt((DIM-1)/DIM * varSum);
+      });
+      const Z = sourceLabels.map((_,j) => bootSD[j] > 1e-9 ? baseline[j]/bootSD[j] : (baseline[j] > 0 ? Infinity : 0));
+
+      return { targetLabel: target.label, sourceLabels, baseline, bootSD, jackSD, Z, distance, reps };
+    }
+
+    function stabStatus(msg, kind) {
+      const el = document.getElementById('stabRunStatus');
+      if (!el) return;
+      el.textContent = msg;
+      el.style.color = kind === 'error' ? 'var(--danger)' : (kind === 'ok' ? 'var(--accent)' : 'var(--text-2)');
+    }
+
+    function stabCheckedSources() {
+      if (!stabLoadedSources.length && document.getElementById('stabSourcesInput').value.trim()) stabLoadSources();
+      const checked = new Set(
         Array.from(document.querySelectorAll('.stab-src-check:checked')).map(el => el.value)
       );
-      const sources = stabLoadedSources.filter(s => checkedLabels.has(s.label));
-      const runStatus = document.getElementById('stabRunStatus');
-      const runBtn = document.getElementById('stabRunBtn');
-      if (!target) { runStatus.textContent = 'Enter a target line: Label,c1,c2,...,cn'; runStatus.style.color='var(--danger)'; return; }
-      if (!stabLoadedSources.length) { runStatus.textContent = 'Enter sources and click Load sources.'; runStatus.style.color='var(--danger)'; return; }
-      if (sources.length < 2) { runStatus.textContent = 'Check at least two sources.'; runStatus.style.color='var(--danger)'; return; }
+      return stabLoadedSources.filter(s => checked.has(s.label));
+    }
+
+    /* Shared validation + settings for any run. Returns null and posts a status on failure. */
+    function stabPrepare() {
+      if (!stabLoadedTargets.length && document.getElementById('stabTargetInput').value.trim()) stabLoadTargets();
+      const sources = stabCheckedSources();
+      if (!stabLoadedTargets.length) { stabStatus('Enter at least one target line: Label,c1,c2,…', 'error'); return null; }
+      if (!stabLoadedSources.length) { stabStatus('Enter sources and click Load sources.', 'error'); return null; }
+      if (sources.length < 2) { stabStatus('Check at least two sources.', 'error'); return null; }
+      const reps = Math.max(200, Math.min(20000, parseInt(document.getElementById('stabRepsInput').value) || 2000));
+      return { sources, reps };
+    }
+
+    function stabCheckTarget(target, sources) {
       const dim = target.vec.length;
       const mismatched = sources.filter(s => s.vec.length !== dim);
-      if (mismatched.length) { runStatus.textContent = 'Dimension mismatch with: ' + mismatched.map(s=>s.label).join(', '); runStatus.style.color='var(--danger)'; return; }
-      if (sources.some(s => s.label === target.label)) { runStatus.textContent = 'A source has the same label as the target.'; runStatus.style.color='var(--danger)'; return; }
+      if (mismatched.length) return `${target.label}: dimension mismatch with ` + mismatched.map(s=>s.label).join(', ');
+      if (sources.some(s => s.label === target.label)) return `${target.label}: a source has the same label as the target.`;
+      return null;
+    }
 
-      runStatus.textContent = 'Running…'; runStatus.style.color='var(--text-2)';
-      runBtn.disabled = true;
+    function stabSetBusy(on) {
+      stabBusy = on;
+      const runAll = document.getElementById('stabRunAllBtn');
+      if (runAll) runAll.disabled = on;
+      document.querySelectorAll('.stab-tgt-run').forEach(b => { b.disabled = on; });
+      document.querySelectorAll('.stab-rerun').forEach(b => { b.disabled = on; });
+    }
 
+    function stabStoreResult(res) {
+      const order = stabLoadedTargets.map(t => t.label);
+      const i = stabResults.findIndex(r => r.targetLabel === res.targetLabel);
+      if (i >= 0) stabResults[i] = res; else stabResults.push(res);
+      stabResults.sort((a,b) => order.indexOf(a.targetLabel) - order.indexOf(b.targetLabel));
+    }
+
+    /* Run one target. opts.chained keeps the busy lock across a Run all sequence. */
+    function stabRunTarget(i, opts) {
+      opts = opts || {};
+      if (stabBusy && !opts.chained) return;
+      const target = stabLoadedTargets[i];
+      if (!target) { stabStatus('That target is no longer loaded — click Load targets.', 'error'); return; }
+      const prep = opts.prep || stabPrepare();
+      if (!prep) { if (opts.done) opts.done(false); return; }
+      const err = stabCheckTarget(target, prep.sources);
+      if (err) {
+        stabStatus(err, 'error');
+        stabSetTargetState(i, 'error', true);
+        if (opts.done) opts.done(false);
+        return;
+      }
+      stabSetBusy(true);
+      stabSetTargetState(i, 'running…');
+      if (!opts.chained) stabStatus(`Running ${target.label}…`);
       setTimeout(() => {
+        let ok = true;
         try {
-          const reps = Math.max(200, Math.min(20000, parseInt(document.getElementById('stabRepsInput').value) || 2000));
-          const sourceLabels = sources.map(s => s.label);
-          const COORDS = {};
-          COORDS[target.label] = target.vec;
-          sources.forEach(s => { COORDS[s.label] = s.vec; });
-          const targetVec = target.vec;
-          const DIM = dim;
-          const buildRows = (dims) => dims.map(d => sourceLabels.map(l => COORDS[l][d]));
-          const allDimIdx = Array.from({length:DIM}, (_,i) => i);
-
-          const baselineFit = stabComputeBaseline(targetVec, buildRows(allDimIdx));
-          const baseline = baselineFit.normalized;
-          const distance = baselineFit.distance;
-
-          const rng = stabMulberry32(42);
-          const bootResults = [];
-          for (let b=0; b<reps; b++) {
-            const idx = [];
-            for (let i=0;i<DIM;i++) idx.push(Math.floor(rng()*DIM));
-            bootResults.push(stabFitNormalized(idx.map(i => targetVec[i]), buildRows(idx)));
-          }
-          const bootMean = sourceLabels.map((_,j) => stabAvg(bootResults.map(r=>r[j])));
-          const bootSD = sourceLabels.map((_,j) => stabStdev(bootResults.map(r=>r[j]), bootMean[j]));
-
-          const jackFits = [];
-          for (let i=0;i<DIM;i++) {
-            const idx = allDimIdx.filter(d => d !== i);
-            jackFits.push(stabFitNormalized(idx.map(d => targetVec[d]), buildRows(idx)));
-          }
-          const jackMean = sourceLabels.map((_,j) => stabAvg(jackFits.map(r=>r[j])));
-          const jackSD = sourceLabels.map((_,j) => {
-            const varSum = jackFits.reduce((s,r) => s + Math.pow(r[j]-jackMean[j],2), 0);
-            return Math.sqrt((DIM-1)/DIM * varSum);
-          });
-          const Z = sourceLabels.map((_,j) => bootSD[j] > 1e-9 ? baseline[j]/bootSD[j] : (baseline[j] > 0 ? Infinity : 0));
-
-          stabLastResults = { sourceLabels, baseline, bootSD, jackSD, Z, distance };
+          const res = stabAnalyze(target, prep.sources, prep.reps);
+          stabStoreResult(res);
           stabRenderResults();
-          runStatus.textContent = `Done — ${reps} bootstrap replicates.`;
-          runStatus.style.color = 'var(--accent)';
+          stabSetTargetState(i, 'done');
+          if (!opts.chained) stabStatus(`Done — ${target.label} · ${prep.reps} bootstrap replicates.`, 'ok');
         } catch (e) {
           console.error(e);
-          runStatus.textContent = 'Fit failed — check coordinates.';
-          runStatus.style.color = 'var(--danger)';
+          ok = false;
+          stabSetTargetState(i, 'failed', true);
+          stabStatus(`Fit failed for ${target.label} — check coordinates.`, 'error');
         } finally {
-          runBtn.disabled = false;
+          if (!opts.chained) stabSetBusy(false);
         }
+        if (opts.done) opts.done(ok);
       }, 20);
+    }
+
+    /* Run every loaded target in sequence, one per tick so the UI can update. */
+    function stabRunAll() {
+      if (stabBusy) return;
+      const prep = stabPrepare();
+      if (!prep) return;
+      const n = stabLoadedTargets.length;
+      if (n === 1) { stabRunTarget(0, { prep }); return; }
+      let i = 0, failures = 0;
+      stabSetBusy(true);
+      const step = () => {
+        if (i >= n) {
+          stabSetBusy(false);
+          const okCount = n - failures;
+          stabStatus(`Done — ${okCount}/${n} targets · ${prep.reps} replicates each.`, failures ? 'error' : 'ok');
+          return;
+        }
+        const idx = i++;
+        stabStatus(`Running ${idx+1}/${n} · ${stabLoadedTargets[idx].label}…`);
+        stabRunTarget(idx, { prep, chained: true, done: (ok) => { if (!ok) failures++; step(); } });
+      };
+      step();
+    }
+
+    /* Kept for backwards compatibility with the old single-target button. */
+    function stabRun() { stabRunAll(); }
+
+    function stabRerunResult(k) {
+      const res = stabResults[k];
+      if (!res) return;
+      const i = stabLoadedTargets.findIndex(t => t.label === res.targetLabel);
+      if (i < 0) { stabStatus('That target is no longer loaded — click Load targets.', 'error'); return; }
+      stabRunTarget(i);
+    }
+
+    function stabRemoveResult(k) {
+      if (stabBusy) return;
+      stabResults.splice(k, 1);
+      stabRenderTargetList();
+      stabRenderResults();
+    }
+
+    function stabClearResults() {
+      if (stabBusy) return;
+      stabResults = [];
+      stabRenderTargetList();
+      stabRenderResults();
+      stabStatus('');
     }
 
     function stabZColor(z){
@@ -3731,27 +3877,7 @@
         b.style.background = b.dataset.scheme === mode ? 'rgba(79,184,166,0.2)' : '';
         b.style.color = b.dataset.scheme === mode ? 'var(--accent)' : '';
       });
-      if (stabLastResults) stabDrawChart();
-    }
-
-    function stabRenderResults(){
-      document.getElementById('stabEmptyState').style.display = 'none';
-      document.getElementById('stabResultsArea').style.display = 'block';
-      document.getElementById('stabChartToggle').style.display = 'flex';
-      const { sourceLabels, baseline, bootSD, jackSD, Z, distance } = stabLastResults;
-      document.getElementById('stabDistanceStat').innerHTML =
-        `<span style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);">G25 fit</span>` +
-        `<span style="font-size:18px;font-weight:700;color:var(--text-0);">${distance.toFixed(4)}</span>` +
-        `<span style="font-size:11px;color:var(--text-2);margin-left:auto;">Euclidean distance · lower is tighter</span>`;
-      document.getElementById('stabResultsBody').innerHTML = sourceLabels.map((lbl,j) => `
-        <tr>
-          <td style="text-align:left;">${stabEscape(lbl)}</td>
-          <td>${(baseline[j]*100).toFixed(1)}%</td>
-          <td>${(bootSD[j]*100).toFixed(1)}%</td>
-          <td>${(jackSD[j]*100).toFixed(1)}%</td>
-          <td style="color:${stabZColor(Z[j])};font-weight:700;">${isFinite(Z[j]) ? Z[j].toFixed(2) : '∞'}</td>
-        </tr>`).join('');
-      stabDrawChart();
+      stabDrawAllCharts();
     }
 
     function stabSetChart(mode){
@@ -3760,7 +3886,83 @@
         b.style.background = b.dataset.mode === mode ? 'rgba(79,184,166,0.2)' : '';
         b.style.color = b.dataset.mode === mode ? 'var(--accent)' : '';
       });
-      if (stabLastResults) stabDrawChart();
+      stabDrawAllCharts();
+    }
+
+    function stabBlockHtml(r, k) {
+      const rows = r.sourceLabels.map((lbl,j) => `
+              <tr>
+                <td style="text-align:left;">${stabEscape(lbl)}</td>
+                <td>${(r.baseline[j]*100).toFixed(1)}%</td>
+                <td>${(r.bootSD[j]*100).toFixed(1)}%</td>
+                <td>${(r.jackSD[j]*100).toFixed(1)}%</td>
+                <td style="color:${stabZColor(r.Z[j])};font-weight:700;">${isFinite(r.Z[j]) ? r.Z[j].toFixed(2) : '∞'}</td>
+              </tr>`).join('');
+      return `
+      <div class="stab-block" style="border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:16px;background:var(--bg-1);">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+          <span style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text-0);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${stabEscape(r.targetLabel)}">${stabEscape(r.targetLabel)}</span>
+          <span style="font-size:11px;color:var(--text-2);">${r.reps} reps · ${r.sourceLabels.length} sources</span>
+          <button class="buttons small stab-rerun" style="margin:0;" onclick="stabRerunResult(${k})" title="Re-run this target">Re-run</button>
+          <button class="buttons small" style="margin:0;" onclick="stabRemoveResult(${k})" title="Remove this result">✕</button>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:10px;background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-family:var(--mono);font-size:12px;">
+          <span style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);">G25 fit</span>
+          <span style="font-size:18px;font-weight:700;color:var(--text-0);">${r.distance.toFixed(4)}</span>
+          <span style="font-size:11px;color:var(--text-2);margin-left:auto;">Euclidean distance · lower is tighter</span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="distances" style="width:100%;">
+            <thead>
+              <tr>
+                <th style="text-align:left;">Source</th>
+                <th>Fit %</th>
+                <th>Boot SD
+                  <span class="info-pop" tabindex="0" data-tooltip="Bootstrap SD: the target&#39;s G25 dimensions are resampled with replacement (same count, drawn at random) many times; each resample is refit with NNLS, and this is the standard deviation of that source&#39;s fitted % across all replicates.">i</span>
+                </th>
+                <th>Jack SD
+                  <span class="info-pop" tabindex="0" data-tooltip="Jackknife SD: the fit is recomputed once per dimension with that single dimension left out, then scaled by √((n−1)/n) × the variance across those leave-one-out fits — showing how much any single dimension swings the result.">i</span>
+                </th>
+                <th>Z (Fit / SD)</th>
+              </tr>
+            </thead>
+            <tbody>${rows}
+            </tbody>
+          </table>
+        </div>
+        <div style="background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:16px;margin-top:14px;max-width:720px;">
+          <canvas id="stabChartCanvas${k}" width="672" height="380" style="width:100%;max-height:420px;display:block;"></canvas>
+          <div id="stabChartLegend${k}" class="pie-legend" style="margin-top:12px;max-height:none;"></div>
+        </div>
+      </div>`;
+    }
+
+    function stabRenderResults(){
+      const wrap = document.getElementById('stabResultsList');
+      const empty = document.getElementById('stabEmptyState');
+      const toggle = document.getElementById('stabChartToggle');
+      const clearBtn = document.getElementById('stabClearBtn');
+      const tier = document.getElementById('stabTierLegend');
+      const count = document.getElementById('stabResultsCount');
+      if (!wrap) return;
+      if (!stabResults.length) {
+        wrap.innerHTML = '';
+        wrap.style.display = 'none';
+        empty.style.display = 'block';
+        toggle.style.display = 'none';
+        clearBtn.style.display = 'none';
+        tier.style.display = 'none';
+        count.textContent = '';
+        return;
+      }
+      empty.style.display = 'none';
+      wrap.style.display = 'block';
+      toggle.style.display = 'flex';
+      clearBtn.style.display = 'inline-block';
+      tier.style.display = 'flex';
+      count.textContent = `· ${stabResults.length} target${stabResults.length===1?'':'s'}`;
+      wrap.innerHTML = stabResults.map((r,k) => stabBlockHtml(r,k)).join('');
+      stabDrawAllCharts();
     }
 
     function stabSetupCanvas(canvas){
@@ -3778,18 +3980,20 @@
       return { ctx, width: cssWidth, height: cssHeight };
     }
 
-    function stabRenderLegend(){
-      const { sourceLabels, baseline, bootSD, Z } = stabLastResults;
-      document.getElementById('stabChartLegend').innerHTML = sourceLabels.map((lbl, i) =>
-        `<div class="pie-leg-row"><span class="pie-swatch" style="background:${stabSliceColor(i, Z[i])}"></span>` +
-        `<span class="pie-leg-pct">${(baseline[i]*100).toFixed(1)}%</span>` +
-        `<span class="pie-leg-name">${stabEscape(lbl)} ±${(bootSD[i]*100).toFixed(1)}</span></div>`
+    function stabRenderLegend(r, k){
+      const el = document.getElementById('stabChartLegend' + k);
+      if (!el) return;
+      el.innerHTML = r.sourceLabels.map((lbl, i) =>
+        `<div class="pie-leg-row"><span class="pie-swatch" style="background:${stabSliceColor(i, r.Z[i])}"></span>` +
+        `<span class="pie-leg-pct">${(r.baseline[i]*100).toFixed(1)}%</span>` +
+        `<span class="pie-leg-name">${stabEscape(lbl)} ±${(r.bootSD[i]*100).toFixed(1)}</span></div>`
       ).join('');
     }
 
-    function stabDrawBar(){
-      const { sourceLabels, baseline, bootSD, Z } = stabLastResults;
-      const canvas = document.getElementById('stabChartCanvas');
+    function stabDrawBar(r, k){
+      const { sourceLabels, baseline, bootSD, Z } = r;
+      const canvas = document.getElementById('stabChartCanvas' + k);
+      if (!canvas) return;
       const { ctx, width, height } = stabSetupCanvas(canvas);
       const padL = 40, padR = 14, padT = 16, padB = 46;
       const plotW = width - padL - padR, plotH = height - padT - padB;
@@ -3810,12 +4014,12 @@
         const fitPct = baseline[i]*100, sdPct = bootSD[i]*100;
         const yTop = yFor(fitPct), yBase = yFor(0);
         ctx.fillStyle = stabSliceColor(i, Z[i]);
-        const bx = cx - barW/2, bh = yBase - yTop, r = Math.min(4, barW/2);
+        const bx = cx - barW/2, bh = yBase - yTop, rr = Math.min(4, barW/2);
         ctx.beginPath();
-        ctx.moveTo(bx, yBase); ctx.lineTo(bx, yTop + r);
-        ctx.arcTo(bx, yTop, bx + r, yTop, r);
-        ctx.lineTo(bx + barW - r, yTop);
-        ctx.arcTo(bx + barW, yTop, bx + barW, yTop + r, r);
+        ctx.moveTo(bx, yBase); ctx.lineTo(bx, yTop + rr);
+        ctx.arcTo(bx, yTop, bx + rr, yTop, rr);
+        ctx.lineTo(bx + barW - rr, yTop);
+        ctx.arcTo(bx + barW, yTop, bx + barW, yTop + rr, rr);
         ctx.lineTo(bx + barW, yBase); ctx.closePath(); ctx.fill();
         const errTopY = yFor(Math.min(100, fitPct + sdPct));
         const errBotY = yFor(Math.max(0, fitPct - sdPct));
@@ -3834,12 +4038,13 @@
         else { ctx.textAlign = 'center'; ctx.textBaseline = 'top'; }
         ctx.fillText(label, 0, 0); ctx.restore();
       });
-      stabRenderLegend();
+      stabRenderLegend(r, k);
     }
 
-    function stabDrawPie(){
-      const { sourceLabels, baseline, Z } = stabLastResults;
-      const canvas = document.getElementById('stabChartCanvas');
+    function stabDrawPie(r, k){
+      const { sourceLabels, baseline, Z } = r;
+      const canvas = document.getElementById('stabChartCanvas' + k);
+      if (!canvas) return;
       const { ctx, width, height } = stabSetupCanvas(canvas);
       const cx = width/2, cy = height/2;
       const radius = Math.min(width, height)/2 - 20;
@@ -3860,12 +4065,17 @@
         }
         angle += slice;
       });
-      stabRenderLegend();
+      stabRenderLegend(r, k);
     }
 
-    function stabDrawChart(){
-      if (!stabLastResults) return;
-      if (stabChartMode === 'bar') stabDrawBar(); else stabDrawPie();
+    function stabDrawChart(k){
+      const r = stabResults[k];
+      if (!r) return;
+      if (stabChartMode === 'bar') stabDrawBar(r, k); else stabDrawPie(r, k);
+    }
+
+    function stabDrawAllCharts(){
+      stabResults.forEach((_, k) => stabDrawChart(k));
     }
 
     function initialize() {
@@ -4629,9 +4839,13 @@ Search is case sensitive.
     <div class="flexcontainer" style="align-items:stretch;">
       <div class="panel rightpanel" style="max-width:28em; overflow-y:auto;">
         <div class="field">
-          <label class="field-label">01 · Target</label>
-          <textarea id="stabTargetInput" class="cgen-textarea" style="min-height:56px;" placeholder="Target_scaled,0.0421,-0.0187,0.0113,..."></textarea>
-          <div class="hint">One line: label, then comma-separated coordinates.</div>
+          <label class="field-label">01 · Targets</label>
+          <textarea id="stabTargetInput" class="cgen-textarea" style="min-height:96px;" placeholder="Target_1,0.0421,-0.0187,0.0113,...
+Target_2,0.0385,-0.0202,0.0098,..."></textarea>
+          <div class="hint">One target per line: label, then comma-separated coordinates. Click Load targets to build the list.</div>
+          <button class="buttons button100" style="margin-top:8px;" id="stabLoadTargetsBtn" onclick="stabLoadTargets()">Load targets</button>
+          <div class="status" id="stabTargetStatus" style="margin-top:6px;font-size:11px;color:var(--text-2);"></div>
+          <div id="stabTargetList" style="display:none; margin-top:10px; max-height:220px; overflow-y:auto; border:1px solid var(--line); border-radius:6px; background:var(--bg-2); padding:4px;"></div>
         </div>
         <div class="field">
           <label class="field-label">02 · Sources</label>
@@ -4645,15 +4859,15 @@ Source_2,0.0388,-0.0241,..."></textarea>
         <div class="field">
           <label class="field-label">03 · Bootstrap replicates</label>
           <input type="number" id="stabRepsInput" class="cgen-text-input" value="2000" min="200" max="20000" step="100" style="width:120px !important;">
-          <div class="hint">Dimensions resampled with replacement; each replicate is refit.</div>
+          <div class="hint">Dimensions resampled with replacement; each replicate is refit. Applies to every target.</div>
         </div>
-        <button class="buttons primary button100" id="stabRunBtn" onclick="stabRun()">Run analysis</button>
+        <button class="buttons primary button100" id="stabRunAllBtn" onclick="stabRunAll()">Run analysis</button>
         <div class="status" id="stabRunStatus" style="margin-top:8px;font-size:11px;color:var(--text-2);"></div>
-        <p class="hint" style="margin-top:14px;">Fit is the NNLS solution on all dimensions. SD is the spread across bootstrap resamples. Z = Fit ÷ SD — high Z means load-bearing, low Z means noise.</p>
+        <p class="hint" style="margin-top:14px;">Each target is fitted against the same checked sources, and every target gets its own result block below. Fit is the NNLS solution on all dimensions. SD is the spread across bootstrap resamples. Z = Fit ÷ SD — high Z means load-bearing, low Z means noise.</p>
       </div>
       <div class="panel leftpanel" style="overflow-y:auto;">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
-          <h2 style="font-size:14px;margin:0;color:var(--text-0);">Stability results</h2>
+          <h2 style="font-size:14px;margin:0;color:var(--text-0);">Stability results <span id="stabResultsCount" style="font-size:11px;font-weight:400;color:var(--text-2);"></span></h2>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <div id="stabChartToggle" style="display:none; border:1px solid var(--line); border-radius:6px; overflow:hidden;">
               <button class="buttons small" data-mode="bar" style="margin:0;border-radius:0;border:none;" onclick="stabSetChart(&#39;bar&#39;)">Bar</button>
@@ -4663,40 +4877,17 @@ Source_2,0.0388,-0.0241,..."></textarea>
               <button class="buttons small" data-scheme="tier" style="margin:0;border-radius:0;border:none;background:rgba(79,184,166,0.2);color:var(--accent);" onclick="stabSetColorScheme(&#39;tier&#39;)" title="Colour by Z-score tier (default)">Tier colours</button>
               <button class="buttons small" data-scheme="default" style="margin:0;border-radius:0;border:none;" onclick="stabSetColorScheme(&#39;default&#39;)" title="Colour by source, same palette as Single admixture">Source colours</button>
             </div>
+            <button class="buttons small" id="stabClearBtn" style="display:none;margin:0;" onclick="stabClearResults()">Clear all</button>
           </div>
         </div>
         <div id="stabEmptyState" class="hint" style="border:1px dashed var(--line);border-radius:8px;padding:28px;text-align:center;">
-          Paste a target and sources, load the checklist, then run. <b>Z ≥ 3</b> is stable; <b>1–3</b> provisional; <b>&lt; 1</b> noise.
+          Paste one target per line and your sources, load both lists, then run all or run a single target. <b>Z &#8805; 3</b> is stable; <b>1&#8211;3</b> provisional; <b>&lt; 1</b> noise.
         </div>
-        <div id="stabResultsArea" style="display:none;">
-          <div id="stabDistanceStat" style="display:flex;align-items:baseline;gap:10px;background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-family:var(--mono);font-size:12px;"></div>
-          <div style="overflow-x:auto;">
-            <table class="distances" style="width:100%;">
-              <thead>
-                <tr>
-                  <th style="text-align:left;">Source</th>
-                  <th>Fit %</th>
-                  <th>Boot SD
-                    <span class="info-pop" tabindex="0" data-tooltip="Bootstrap SD: the target&#39;s G25 dimensions are resampled with replacement (same count, drawn at random) many times; each resample is refit with NNLS, and this is the standard deviation of that source&#39;s fitted % across all replicates.">i</span>
-                  </th>
-                  <th>Jack SD
-                    <span class="info-pop" tabindex="0" data-tooltip="Jackknife SD: the fit is recomputed once per dimension with that single dimension left out, then scaled by √((n−1)/n) × the variance across those leave-one-out fits — showing how much any single dimension swings the result.">i</span>
-                  </th>
-                  <th>Z (Fit / SD)</th>
-                </tr>
-              </thead>
-              <tbody id="stabResultsBody"></tbody>
-            </table>
-          </div>
-          <div style="background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:16px;margin-top:14px;max-width:720px;">
-            <canvas id="stabChartCanvas" width="672" height="380" style="width:100%;max-height:420px;display:block;"></canvas>
-            <div id="stabChartLegend" class="pie-legend" style="margin-top:12px;max-height:none;"></div>
-          </div>
-          <div class="hint" style="margin-top:10px;display:flex;gap:18px;flex-wrap:wrap;">
-            <span>● Z &lt; 1 — noise</span>
-            <span style="color:#f0a04b;">● 1 ≤ Z &lt; 3 — provisional</span>
-            <span style="color:var(--accent);">● Z ≥ 3 — stable</span>
-          </div>
+        <div id="stabResultsList" style="display:none;"></div>
+        <div id="stabTierLegend" class="hint" style="display:none;margin-top:10px;gap:18px;flex-wrap:wrap;">
+          <span>● Z &lt; 1 — noise</span>
+          <span style="color:#f0a04b;">● 1 ≤ Z &lt; 3 — provisional</span>
+          <span style="color:var(--accent);">● Z ≥ 3 — stable</span>
         </div>
       </div>
     </div>
