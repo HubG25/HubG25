@@ -806,7 +806,7 @@
       oracleMode = 0, oracleAddGradient = true, oracleIterationMode = false,
       oracleFixedPop = false, oracleFixedRangemode = 1,
       distMetricMode = 0, notificationTimeout, /* Euclidean only */
-      showPie = true, stabColorScheme = 'tier';
+      showPie = true, pieOrder = 'weight', stabColorScheme = 'tier';
 
     const G25_EIGENVALUES = [
       129.557, 103.13, 14.222, 10.433, 9.471, 7.778, 5.523, 5.325, 4.183, 3.321,
@@ -981,6 +981,13 @@
         case "showPie":
           toggleOption(showPie, "pie&nbsp;chart&nbsp;-&nbsp;");
           showPie = !showPie;
+          if (elmnt.nextElementSibling) {
+            elmnt.nextElementSibling.style.display = showPie ? "" : "none";
+          }
+          break;
+        case "pieOrder":
+          pieOrder = (pieOrder === "weight" ? "alpha" : "weight");
+          elmnt.innerHTML = "pie&nbsp;order&nbsp;-&nbsp;" + (pieOrder === "weight" ? "weight" : "a&#8209;z");
           break;
         case "printZeroesMulti":
           toggleOption(printZeroesMulti, "print&nbsp;zeroes&nbsp;-&nbsp;");
@@ -2763,6 +2770,14 @@
         if (v > 0.0005) { slices.push({ name: resultsTable[i][0], v: v }); total += v; }
       }
       if (total <= 0 || !slices.length) return "";
+      /* Colour is assigned by weight rank before any reordering, so a given
+         source keeps the same swatch whichever order is on screen. */
+      for (let i = 0; i < slices.length; i++) slices[i].col = colors[i % colors.length];
+      if (pieOrder === "alpha") {
+        slices.sort(function (a, b) {
+          return String(a.name).localeCompare(String(b.name), undefined, { numeric: true, sensitivity: "base" });
+        });
+      }
       // normalize
       let acc = 0;
       let paths = "";
@@ -2776,7 +2791,7 @@
         const x1 = cx + r * Math.cos(start), y1 = cy + r * Math.sin(start);
         const x2 = cx + r * Math.cos(end), y2 = cy + r * Math.sin(end);
         const large = frac > 0.5 ? 1 : 0;
-        const col = colors[i % colors.length];
+        const col = slices[i].col;
         if (frac >= 0.999) {
           paths += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${col}"/>`;
         } else {
@@ -5349,6 +5364,7 @@ Search is case sensitive.
         --><button class="buttons button100" onclick="toggleOptions(&#39;aggregate&#39;, this)">aggregate&nbsp;-&nbsp;yes</button><!--
         --><button class="buttons button100" onclick="toggleOptions(&#39;addBarChart&#39;, this)">add&nbsp;bar&nbsp;chart&nbsp;-&nbsp;mode&nbsp;1</button><!--
         --><button class="buttons button100" onclick="toggleOptions(&#39;showPie&#39;, this)">pie&nbsp;chart&nbsp;-&nbsp;yes</button><!--
+        --><button class="buttons button100" onclick="toggleOptions(&#39;pieOrder&#39;, this)" title="Order of the pie slices and legend — by weight, or alphabetically">pie&nbsp;order&nbsp;-&nbsp;weight</button><!--
         --><button id="runallsingle" disabled="" class="buttons button100" onclick="runAllSingle()">run&nbsp;all</button>
         <div id="singletargets"></div>
       </div>
