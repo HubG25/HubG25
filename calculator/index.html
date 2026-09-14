@@ -129,6 +129,11 @@
     font-variant-numeric: tabular-nums;
   }
   .datalist-item { margin-bottom: 0.45em; }
+  .datalist-new {
+    width: 100%; margin: 0.15em 0 0; border-style: dashed;
+    color: var(--text-2); background: transparent;
+  }
+  .datalist-new:hover { color: var(--accent); border-color: var(--accent-dim); border-style: dashed; }
   .datalist-row { display: flex; align-items: stretch; gap: 4px; }
   .datalist-row > .button-data { flex: 1; min-width: 0; margin-bottom: 0; }
   .datalist-row > .datalist-x, .datalist-row > .datalist-edit-btn { flex: none; margin-bottom: 0; color: var(--text-2); }
@@ -3150,6 +3155,30 @@
       refreshDataList();
     }
 
+    /* Builds an empty dataset in memory and drops straight into naming it. It is
+       only written to storage once there is something to save. */
+    function dataCreateNew() {
+      if (dataDirty) {
+        showNotification("Unsaved changes in the box — save or discard them first.", 1);
+        return;
+      }
+      const taken = new Set();
+      dataStore.forEach(function (it) { if (it.used === true) taken.add(it.name); });
+      const base = "New dataset";
+      let name = base, n = 2;
+      while (taken.has(name)) name = base + " " + (n++);
+      const i = dataStore.length;
+      dataStore.push({ used: true, name: name, samples: [], data: [] });
+      dataListId = dataStore.length;
+      dataActive = i;
+      dataCurrent = dataStore[i];
+      document.getElementById("filter").value = "";
+      dataFilter();
+      dataSavedNotice = -1;
+      dataRenameStart(i);
+      showNotification("Empty dataset added — paste coordinates on the right, then Save changes.", 0);
+    }
+
     /* ===== renaming a dataset =====
        The name is part of the stored record, so committing rewrites it in
        IndexedDB alongside the dataset text. */
@@ -3356,6 +3385,8 @@
           (i === dataSavedNotice ? '<div class="datalist-saved" title="Kept in this browser and reloaded next time">Dataset saved</div>' : '') +
           '</div>';
       }
+      html += '<button class="buttons datalist-new" onclick="dataCreateNew()"' +
+        ' title="Create an empty dataset and paste coordinates into it">+ New dataset</button>';
       document.getElementById("datalist").innerHTML = html;
     }
 
@@ -4552,6 +4583,7 @@
         }
       } catch (e) {}
       fsApply(fsStored(), false);
+      refreshDataList();
       dsRestore();
     }
 
