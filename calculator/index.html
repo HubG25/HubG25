@@ -131,8 +131,20 @@
   .datalist-item { margin-bottom: 0.45em; }
   .datalist-row { display: flex; align-items: stretch; gap: 4px; }
   .datalist-row > .button-data { flex: 1; min-width: 0; margin-bottom: 0; }
-  .datalist-row > .datalist-x { flex: none; margin-bottom: 0; color: var(--text-2); }
+  .datalist-row > .datalist-x, .datalist-row > .datalist-edit-btn { flex: none; margin-bottom: 0; color: var(--text-2); }
+  .datalist-row > .datalist-edit-btn:hover { color: var(--accent); border-color: var(--accent-dim); }
   .datalist-row > .datalist-x:hover { color: var(--danger); border-color: var(--danger); background: rgba(200,86,75,0.1); }
+  .datalist-rename {
+    flex: 1; min-width: 0; text-align: left !important;
+    font-family: var(--mono); font-size: calc(11.5px * var(--fs-scale));
+    padding: 6px 8px;
+  }
+  .datalist-edit { display: flex; gap: 4px; margin: 4px 0 0; }
+  .datalist-edit .buttons { margin: 0; }
+  .datalist-edit .datalist-save {
+    flex: 1; background: var(--accent); border-color: var(--accent); color: #0b1613; font-weight: 600;
+  }
+  .datalist-edit .datalist-save:hover { background: #5fc9b6; border-color: #5fc9b6; }
   .datalist-saved {
     font-family: var(--mono); font-size: calc(9.5px * var(--fs-scale));
     color: var(--accent); margin: 3px 0 0 2px; letter-spacing: 0.02em;
@@ -790,7 +802,7 @@
       addDistColMultiRecal = true, distMode = 0, twoDistClicked = false,
       twoDistFirst = false, nPop = 0, af = false, addRep = false,
       dataListId = 0, dataStore = [], dataActive = -1, dataCurrent = false,
-      dataSavedNotice = -1,
+      dataSavedNotice = -1, dataDirty = false, dataRenaming = -1,
       oracleMode = 0, oracleAddGradient = true, oracleIterationMode = false,
       oracleFixedPop = false, oracleFixedRangemode = 1,
       distMetricMode = 0, notificationTimeout, /* Euclidean only */
@@ -3010,22 +3022,6 @@
         document.getElementById("tabTitle").textContent = meta[0];
         document.getElementById("tabDesc").textContent = meta[1];
       }
-      if (tabid == "data") {
-        if (af == false) {
-          document.body.addEventListener("keydown", autofocus);
-          af = true;
-        }
-      } else {
-        if (af == true) {
-          document.body.removeEventListener("keydown", autofocus);
-          af = false;
-        }
-      }
-    }
-
-    function autofocus(e) {
-      let pressed = e.which || e.keyCode;
-      if (pressed == 16) { document.getElementById("filter").focus(); }
     }
 
     /* ===== saved datasets =====
@@ -3063,6 +3059,7 @@
 
     function dsSave(name, text) { return dsTx('readwrite', function (st) { return st.add({ name: name, text: text }); }); }
     function dsAll() { return dsTx('readonly', function (st) { return st.getAll(); }); }
+    function dsUpdate(key, name, text) { return dsTx('readwrite', function (st) { return st.put({ id: key, name: name, text: text }); }); }
     function dsDrop(key) { return dsTx('readwrite', function (st) { return st.delete(key); }); }
 
     function dsIndexSamples(lines) {
@@ -3089,6 +3086,98 @@
       }).catch(function (err) { console.log("Could not read saved datasets:", err); });
     }
 
+    /* ===== editing a loaded dataset =====
+       The output box is editable. Edits only count as dataset changes while a
+       dataset is selected; otherwise the box is just scratch space. */
+    function dataOutputEdited() {
+      if (dataActive < 0 || dataDirty) return;
+      dataDirty = true;
+      dataSavedNotice = -1;
+      refreshDataList();
+    }
+
+    function dataSaveChanges() {
+      const i = dataActive;
+      if (i < 0 || !dataStore[i]) return;
+      const item = dataStore[i];
+      /* The box shows a filtered subset when a filter is on, so saving then
+         would silently throw away every line the filter hid. */
+      if (document.getElementById("filter").value.trim()) {
+        showNotification("Clear the filter first — the box is only showing part of " + item.name + ".", 1);
+        return;
+      }
+      const text = document.getElementById("filteroutput").value
+        .replace(/\r\n/g, "\n").replace(/\n+/g, "\n").trim();
+      const lines = text.length ? text.split("\n") : [];
+      item.data = lines;
+      item.samples = dsIndexSamples(lines);
+      dataCurrent = item;
+      dataDirty = false;
+      dataSavedNotice = i;
+      refreshDataList();
+      const done = function (key) {
+        if (key !== undefined) item.key = key;
+        showNotification(item.name + " updated (" + lines.length + (lines.length === 1 ? " line)." : " lines)."), 0);
+        refreshDataList();
+      };
+      const failed = function (err) {
+        console.log("Could not save dataset changes:", err);
+        showNotification("Changes to " + item.name + " applied, but could not be saved for next time.", 1);
+      };
+      if (item.key !== undefined) dsUpdate(item.key, item.name, text).then(function () { done(); }).catch(failed);
+      else dsSave(item.name, text).then(done).catch(failed);
+    }
+
+    function dataDiscardChanges() {
+      if (!dataDirty) return;
+      dataDirty = false;
+      dataFilter(true);
+      refreshDataList();
+    }
+
+    /* ===== renaming a dataset =====
+       The name is part of the stored record, so committing rewrites it in
+       IndexedDB alongside the dataset text. */
+    function dataRenameStart(i) {
+      if (!dataStore[i] || dataStore[i].used !== true) return;
+      dataRenaming = i;
+      dataSavedNotice = -1;
+      refreshDataList();
+      const input = document.getElementById("datalistRenameInput");
+      if (input) { input.focus(); input.select(); }
+    }
+
+    function dataRenameCancel() {
+      if (dataRenaming === -1) return;
+      dataRenaming = -1;
+      refreshDataList();
+    }
+
+    function dataRenameKey(e) {
+      if (e.key === "Enter") { e.preventDefault(); dataRenameCommit(); }
+      else if (e.key === "Escape") { e.preventDefault(); dataRenameCancel(); }
+    }
+
+    function dataRenameCommit() {
+      const i = dataRenaming;
+      if (i === -1) return;
+      const item = dataStore[i], input = document.getElementById("datalistRenameInput");
+      if (!item || !input) { dataRenameCancel(); return; }
+      const name = input.value.trim();
+      if (!name) { showNotification("A dataset needs a name.", 1); input.focus(); return; }
+      const previous = item.name;
+      item.name = name;
+      dataRenaming = -1;
+      refreshDataList();
+      if (name === previous || item.key === undefined) return;
+      dsUpdate(item.key, name, item.data.join("\n"))
+        .then(function () { showNotification("Renamed to " + name + ".", 0); })
+        .catch(function (err) {
+          console.log("Could not save the new name:", err);
+          showNotification("Renamed to " + name + ", but the new name could not be saved for next time.", 1);
+        });
+    }
+
     /* "Dataset saved" is a one-off confirmation: the next interaction clears it. */
     function dataClearSavedNotice() {
       if (dataSavedNotice === -1) return;
@@ -3100,9 +3189,10 @@
       const item = dataStore[i];
       if (!item || item.used !== true) return;
       const name = item.name, key = item.key;
-      if (dataActive === i) { dataActive = -1; dataCurrent = false; dataFilter(true); }
+      if (dataActive === i) { dataDirty = false; dataActive = -1; dataCurrent = false; dataFilter(true); }
       item.used = false; item.samples = []; item.data = []; item.key = undefined;
       if (dataSavedNotice === i) dataSavedNotice = -1;
+      if (dataRenaming === i) dataRenaming = -1;
       refreshDataList();
       if (key === undefined) { showNotification(name + " removed.", 0); return; }
       dsDrop(key)
@@ -3230,13 +3320,24 @@
       for (let i = 0, n = dataStore.length; i < n; i++) {
         if (dataStore[i].used !== true) continue;
         const saved = dataStore[i].key !== undefined;
+        const rowInner = (i === dataRenaming)
+          ? '<input type="text" class="input-data datalist-rename" id="datalistRenameInput" spellcheck="false"' +
+            ' value="' + String(dataStore[i].name).replace(/"/g, '&quot;') + '"' +
+            ' onkeydown="dataRenameKey(event)">' +
+            '<button class="buttons small" onclick="dataRenameCommit()" title="Save the new name">✓</button>' +
+            '<button class="buttons small datalist-x" onclick="dataRenameCancel()" title="Keep the old name">×</button>'
+          : '<button class="buttons button100 button-data data-item-btn ' + (i == dataActive ? "dataButtonActive" : "") +
+            '" onclick="getData(' + i + ', this)">' + dataStore[i].name + '</button>' +
+            '<button class="buttons small datalist-edit-btn" onclick="dataRenameStart(' + i + ')" title="Rename this dataset">✎</button>' +
+            '<button class="buttons small datalist-x" onclick="dataDeleteSaved(' + i + ')" title="' +
+            (saved ? 'Remove and delete from saved datasets' : 'Remove from the list') + '">×</button>';
         html += '<div class="datalist-item">' +
-          '<div class="datalist-row">' +
-          '<button class="buttons button100 button-data data-item-btn ' + (i == dataActive ? "dataButtonActive" : "") +
-          '" onclick="getData(' + i + ', this)">' + dataStore[i].name + '</button>' +
-          '<button class="buttons small datalist-x" onclick="dataDeleteSaved(' + i + ')" title="' +
-          (saved ? 'Remove and delete from saved datasets' : 'Remove from the list') + '">×</button>' +
-          '</div>' +
+          '<div class="datalist-row">' + rowInner + '</div>' +
+          (i === dataActive && dataDirty ?
+            '<div class="datalist-edit">' +
+            '<button class="buttons small datalist-save" onclick="dataSaveChanges()">Save changes</button>' +
+            '<button class="buttons small" onclick="dataDiscardChanges()" title="Restore the saved version">Discard</button>' +
+            '</div>' : '') +
           (i === dataSavedNotice ? '<div class="datalist-saved" title="Kept in this browser and reloaded next time">Dataset saved</div>' : '') +
           '</div>';
       }
@@ -3250,6 +3351,10 @@
     }
 
     function getData(id, button) {
+      if (dataDirty) {
+        showNotification("Unsaved changes to " + dataStore[dataActive].name + " — save or discard them first.", 1);
+        return;
+      }
       let dataButtons = document.querySelectorAll('#datalist .data-item-btn');
       removeClass("dataButtonActive", dataButtons);
       if (id == dataActive) {
@@ -3266,6 +3371,10 @@
     }
 
     function dataFilter(highlight = false) {
+      if (dataDirty) {
+        showNotification("Unsaved changes in the box — save or discard them first.", 1);
+        return;
+      }
       let output = document.getElementById("filteroutput"),
         input = document.getElementById("filter").value;
       input = input.trim()
@@ -5092,11 +5201,10 @@
           <button class="buttons" onclick="copyTo(&#39;target&#39;, this)" style="flex: 1;">target</button>
           <button class="buttons filterReset" onclick="clearDataTransfer()" style="flex: 0 0 auto; margin-left: 0.4em;" title="Clear source, target, and output">×</button>
         </div>
-        <textarea readonly="" spellcheck="false" class="" id="filteroutput" value="" placeholder="Press &#39;OPEN FILES&#39; button and select one or multiple files to load CSV spreadsheets.
+        <textarea spellcheck="false" class="" id="filteroutput" oninput="dataOutputEdited()" value="" placeholder="Press &#39;OPEN FILES&#39; button and select one or multiple files to load CSV spreadsheets.
 Lines starting with a comma (headers) will be omitted.
 
-Press &#39;Shift&#39; to focus the search field.
-Start typing to filter the list of samples.
+Click the search field and start typing to filter the list of samples.
 
 Search is case sensitive.
 
