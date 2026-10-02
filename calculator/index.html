@@ -789,6 +789,39 @@
   }
   .donate-copy-btn:hover { background: rgba(79,184,166,0.08); border-color: var(--accent-dim); }
 
+  /* ---- weight conditions (single + multi) ---- */
+  .condgroup {
+    background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--r-md);
+    padding: 10px; margin: 0 0 0.45em; box-sizing: border-box; text-align: left;
+  }
+  .condgroup-multi { margin: 0.4em 0 0 0.4em; max-width: 60em; }
+  .condhead { display: flex; justify-content: space-between; align-items: center; gap: 0.5em; margin-bottom: 8px; }
+  .condhead .ctrlgroup-title { margin: 0; }
+  .condbtns { display: flex; gap: 0.4em; }
+  .condbtns .buttons { margin: 0; min-height: 0; width: auto; padding: 0.35em 0.7em; font-size: 0.72em; }
+  .condrow {
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-sm);
+    padding: 6px; margin-bottom: 6px;
+  }
+  .condrow.bad { border-color: var(--danger); box-shadow: 0 0 0 2px rgba(200,86,75,0.18); }
+  .condline { display: flex; align-items: center; gap: 6px; }
+  .condline.condmain { align-items: flex-start; }
+  .condpops { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .condpopwrap { display: flex; align-items: center; gap: 6px; }
+  .condrow .condplus { margin: 0; width: 2.4em; min-height: 0; padding: 0.35em 0; flex: 0 0 auto; align-self: stretch; }
+  .condhead .info-pop { text-transform: none; }
+  .condline + .condline { margin-top: 6px; }
+  .condrow input.condpop { flex: 1 1 auto; width: 100%; min-width: 0; text-align: left; background: var(--bg-1); }
+  .condrow select.condtype { width: 7.2em; flex: 0 0 auto; background-color: var(--bg-1); }
+  .condrow input.condval { flex: 1 1 4em; min-width: 3.4em; background: var(--bg-1); }
+  .condrow .condsep, .condrow .condunit { color: var(--text-2); font-family: var(--mono); font-size: 0.85em; flex: 0 0 auto; }
+  .condrow .condx { margin: 0; width: 2.4em; min-height: 0; padding: 0.35em 0; flex: 0 0 auto; }
+  .condsummary { font-family: var(--mono); font-size: 0.78em; color: var(--accent); font-weight: normal; }
+  div.condsummary { margin: 0.2em 0 0.5em; }
+  .condgroup-multi .condrow { display: flex; align-items: center; gap: 10px; }
+  .condgroup-multi .condrow .condline { margin: 0; }
+  .condgroup-multi .condrow .condline:first-child { flex: 1 1 24em; }
+  .condgroup-multi .condrow .condline:last-child { flex: 0 1 26em; }
 </style>
   <script>
     /* Applied before first paint so the saved font size does not flash. */
@@ -1897,7 +1930,7 @@
       return source;
     }
 
-    function nPops(target, source, targetId, slots, cyclesMultiplier, distColMultiplier, recalculate, nPop) {
+    function nPops(target, source, targetId, slots, cyclesMultiplier, distColMultiplier, recalculate, nPop, condCtx) {
       let namesArr = [], idArr = [], initSet = [], initResult, initResultsTable = [], counter = 0, sloths = slots,
         initSourceNum, popNum, currentSet = [], currentResult, nextSet, nextResult, newSource = [], newNamesArr = [];
 
@@ -1923,7 +1956,8 @@
         for (item of setToRun) {
           currentSource = currentSource.concat(source[item]);
         }
-        return fastMonteCarlo(target, currentSource, targetId, slots, cyclesMultiplier, distColMultiplier, recalculate, currentSource.length);
+        return fastMonteCarlo(target, currentSource, targetId, slots, cyclesMultiplier, distColMultiplier, recalculate, currentSource.length,
+          condCtx ? condBuild(condCtx, getNames(setToRun)) : undefined);
       }
 
       function runFMCadc(setToRun, slots, adc, adcmltp, cmltp) {
@@ -1931,7 +1965,8 @@
         for (item of setToRun) {
           currentSource = currentSource.concat(source[item]);
         }
-        return fastMonteCarlo(target, currentSource, targetId, slots, cmltp, adcmltp, adc, currentSource.length);
+        return fastMonteCarlo(target, currentSource, targetId, slots, cmltp, adcmltp, adc, currentSource.length,
+          condCtx ? condBuild(condCtx, getNames(setToRun)) : undefined);
       }
 
       function getNames(setToRun) {
@@ -1976,6 +2011,9 @@
         runFMCadc(initSet, slotNum, true, 2, cyclesNum),
         runFMCadc(initSet, 500, false, 0, 2)
       ];
+      if (condCtx && initResult[5].infeasible) {
+        return { infeasible: true, distance: Infinity, scores: [], names: [], pops: 0, iter: counter };
+      }
       for (let item in idArr) {
         for (let item2 in initResult) {
           initResultsTable.push([idArr[item], initResult[item2].scores[item]]);
@@ -1989,13 +2027,58 @@
       // 0.02 cut, but never fewer than nPop candidates: otherwise a strict cut can
       // shrink the pool below the requested n and silently return a smaller model.
       const minKeep = Math.max(nPop, 1);
+      const keptIds = [], keptSet = new Set(), excludedGroup = [], condGroups = [];
+      if (condCtx) {
+        const K = condCtx.K;
+        for (let g = 0; g < namesArr.length; g++) {
+          // which conditions touch this group, and is every line of it capped at 0%?
+          const touched = new Uint8Array(K);
+          let allCapped = namesArr[g].length > 0;
+          for (const nm of namesArr[g]) {
+            const m = condCtx.memByName.get(nm);
+            let capped = false;
+            if (m) for (let k = 0; k < K; k++) if (m[k]) { touched[k] = 1; if (condCtx.hi[k] === 0) capped = true; }
+            if (!capped) allCapped = false;
+          }
+          condGroups[g] = touched;
+          excludedGroup[g] = allCapped;
+        }
+        // A minimum on a population forces (one of) its groups into every model:
+        // the best-scoring matching group goes in first.
+        const rankPos = {};
+        for (let r = 0; r < initResultsTable.length; r++) rankPos[Number(initResultsTable[r][0])] = r;
+        for (let k = 0; k < K; k++) {
+          if (!(condCtx.lo[k] > 0)) continue;
+          const cand = [];
+          for (let g = 0; g < namesArr.length; g++) if (condGroups[g][k] && !excludedGroup[g]) cand.push(g);
+          if (!cand.length || cand.some(function (g) { return keptSet.has(g); })) continue;
+          cand.sort(function (x, y) { return rankPos[x] - rankPos[y]; });
+          keptIds.push(cand[0]);
+          keptSet.add(cand[0]);
+        }
+      }
       for (let item in initResultsTable) {
-        if (Number(initResultsTable[item][1]) > 0.02 || newSource.length < minKeep) {
-          newSource.push(source[Number(initResultsTable[item][0])]);
-          newNamesArr.push(namesArr[Number(initResultsTable[item][0])]);
+        const g = Number(initResultsTable[item][0]);
+        if (excludedGroup[g] || keptSet.has(g)) continue;
+        if (Number(initResultsTable[item][1]) > 0.02 || keptIds.length < minKeep) {
+          keptIds.push(g);
+          keptSet.add(g);
         } else {
           break;
         }
+      }
+      if (condCtx) {
+        // keep every other group that could carry a required minimum, so the search can swap between them
+        for (let k = 0; k < condCtx.K; k++) {
+          if (!(condCtx.lo[k] > 0)) continue;
+          for (let g = 0; g < namesArr.length; g++) {
+            if (condGroups[g][k] && !excludedGroup[g] && !keptSet.has(g)) { keptIds.push(g); keptSet.add(g); }
+          }
+        }
+      }
+      for (const g of keptIds) {
+        newSource.push(source[g]);
+        newNamesArr.push(namesArr[g]);
       }
       source = newSource;
       namesArr = newNamesArr;
@@ -2049,7 +2132,298 @@
       return finishIt();
     }
 
-    function fastMonteCarlo(target, source, targetId, slots, cyclesMultiplier, distColMultiplier, recalculate, sourceNum) {
+    /* ================= weight conditions (single + multi) =================
+       A condition limits the combined weight of one or more populations
+       (added with the + button) to a minimum, a maximum or a range.
+       A name matches a source line by its full name ("Spain:IA") or by its
+       aggregate name, the part before ":" ("Spain").
+       The solver works in whole slots, so the percentages are turned into
+       slot counts and every move the optimiser makes is checked against
+       them: the weights can never leave the allowed region. */
+    function condPopHtml(first) {
+      return '<div class="condpopwrap">' +
+        '<input type="text" class="condpop" list="condsourcelist" spellcheck="false" autocomplete="off" placeholder="' +
+        (first ? 'population, e.g. Spain or Spain:IA' : 'another population (weights are combined)') + '">' +
+        (first
+          ? '<button type="button" class="buttons condplus" title="Add another population to this condition (their weights are combined)" onclick="condAddPop(this)">+</button>'
+          : '<button type="button" class="buttons condplus" title="Remove this population" onclick="condRemovePop(this)">&minus;</button>') +
+        '</div>';
+    }
+
+    function condRowHtml() {
+      return '<div class="condline condmain">' +
+        '<div class="condpops">' + condPopHtml(true) + '</div>' +
+        '<button type="button" class="buttons condx" title="Remove condition" onclick="condRemoveRow(this)">&times;</button>' +
+        '</div><div class="condline">' +
+        '<select class="condtype" onchange="condTypeChanged(this)">' +
+        '<option value="min">at least</option><option value="max">at most</option>' +
+        '<option value="range">between</option></select>' +
+        '<input type="text" class="condval condlo" inputmode="decimal" spellcheck="false" autocomplete="off" placeholder="min">' +
+        '<span class="condsep">to</span>' +
+        '<input type="text" class="condval condhi" inputmode="decimal" spellcheck="false" autocomplete="off" placeholder="max">' +
+        '<span class="condunit">%</span></div>';
+    }
+
+    function condTypeChanged(sel) {
+      const row = sel.closest('.condrow'), t = sel.value;
+      const lo = row.querySelector('.condlo'), hi = row.querySelector('.condhi'), sep = row.querySelector('.condsep');
+      lo.style.display = (t === 'max') ? 'none' : '';
+      hi.style.display = (t === 'max' || t === 'range') ? '' : 'none';
+      sep.style.display = (t === 'range') ? '' : 'none';
+      lo.placeholder = (t === 'range') ? 'min (blank = 0)' : 'min';
+      hi.placeholder = (t === 'range') ? 'max (blank = 100)' : 'max';
+    }
+
+    function condRefresh(scope) {
+      const n = document.getElementById(scope + 'CondList').children.length;
+      document.getElementById(scope + 'CondCount').textContent = n ? '(' + n + ')' : '';
+      document.getElementById(scope + 'CondClear').style.display = n ? '' : 'none';
+    }
+
+    function condAddPop(btn) {
+      const box = btn.closest('.condpops');
+      const w = document.createElement('div');
+      w.innerHTML = condPopHtml(false);
+      const el = w.firstChild;
+      box.appendChild(el);
+      el.querySelector('.condpop').focus();
+    }
+
+    function condRemovePop(btn) {
+      btn.closest('.condpopwrap').remove();
+    }
+
+    function condAddRow(scope) {
+      const row = document.createElement('div');
+      row.className = 'condrow';
+      row.innerHTML = condRowHtml();
+      document.getElementById(scope + 'CondList').appendChild(row);
+      condTypeChanged(row.querySelector('.condtype'));
+      condRefresh(scope);
+      row.querySelector('.condpop').focus();
+    }
+
+    function condRemoveRow(btn) {
+      const row = btn.closest('.condrow'), scope = row.parentNode.dataset.scope;
+      row.remove();
+      condRefresh(scope);
+    }
+
+    function condClear(scope) {
+      document.getElementById(scope + 'CondList').innerHTML = '';
+      condRefresh(scope);
+    }
+
+    function condParseNum(s) {
+      s = String(s).trim().replace(',', '.').replace(/%$/, '').trim();
+      if (s === '') return null;
+      const v = Number(s);
+      return isFinite(v) ? v : NaN;
+    }
+
+    function condPct(x) { return String(+x.toFixed(3)); }
+
+    function condLabel(c) {
+      let s;
+      if (c.lo === c.hi) s = '= ' + condPct(c.lo) + '%';
+      else if (c.lo <= 0) s = '\u2264 ' + condPct(c.hi) + '%';
+      else if (c.hi >= 100) s = '\u2265 ' + condPct(c.lo) + '%';
+      else s = condPct(c.lo) + '\u2013' + condPct(c.hi) + '%';
+      return c.pop + ' ' + s;
+    }
+
+    // Reads the condition rows of one tab. Returns { conds, text } or { error }.
+    function condRead(scope) {
+      const rows = document.getElementById(scope + 'CondList').children, conds = [];
+      for (let i = 0; i < rows.length; i++) rows[i].classList.remove('bad');
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i], label = 'Condition ' + (i + 1) + ': ';
+        const pops = Array.prototype.map.call(row.querySelectorAll('.condpop'), function (el) { return el.value.trim(); })
+          .filter(Boolean);
+        const type = row.querySelector('.condtype').value;
+        const a = condParseNum(row.querySelector('.condlo').value), b = condParseNum(row.querySelector('.condhi').value);
+        const fail = function (msg) { row.classList.add('bad'); return { error: label + msg }; };
+        const used = (type === 'range') ? [a, b] : (type === 'max') ? [b] : [a];
+        if (!pops.length && used.every(function (v) { return v === null; })) continue; // blank row
+        if (!pops.length) return fail('choose a population.');
+        if (used.some(function (v) { return v !== null && isNaN(v); })) return fail('enter a number for the percentage.');
+        let lo, hi;
+        if (type === 'min') { if (a === null) return fail('enter a minimum %.'); lo = a; hi = 100; }
+        else if (type === 'max') { if (b === null) return fail('enter a maximum %.'); lo = 0; hi = b; }
+        else {
+          if (a === null && b === null) return fail('enter a minimum and/or a maximum %.');
+          lo = (a === null) ? 0 : a; hi = (b === null) ? 100 : b;
+        }
+        if (lo < 0 || hi > 100 || lo > hi) return fail('values must satisfy 0 \u2264 min \u2264 max \u2264 100.');
+        if (lo <= 0 && hi >= 100) continue; // allows everything
+        const targets = pops.map(function (s) { return { raw: s, low: s.toLowerCase() }; });
+        conds.push({ pop: pops.join(' + '), targets: targets, lo: lo, hi: hi, row: row });
+      }
+      return { conds: conds, text: conds.map(condLabel).join(', ') };
+    }
+
+    // Matches the conditions against every source name once per run.
+    function condPrepare(conds, names) {
+      const K = conds.length, memByName = new Map(), seen = conds.map(function () { return new Set(); });
+      for (let i = 0; i < names.length; i++) {
+        const nm = names[i];
+        if (memByName.has(nm)) continue;
+        const full = nm.toLowerCase(), pre = nm.split(':')[0].toLowerCase(), m = new Uint8Array(K);
+        for (let k = 0; k < K; k++) {
+          const tg = conds[k].targets;
+          for (let t = 0; t < tg.length; t++) {
+            if (tg[t].low === full || tg[t].low === pre) { m[k] = 1; seen[k].add(t); }
+          }
+        }
+        memByName.set(nm, m);
+      }
+      for (let k = 0; k < K; k++) {
+        const tg = conds[k].targets;
+        for (let t = 0; t < tg.length; t++) {
+          if (!seen[k].has(t)) {
+            if (conds[k].row) conds[k].row.classList.add('bad');
+            return { error: 'Condition ' + (k + 1) + ': no source population matches \u201c' + escapeHtml(tg[t].raw) + '\u201d.' };
+          }
+        }
+      }
+      return {
+        K: K, memByName: memByName,
+        lo: conds.map(function (c) { return c.lo / 100; }),
+        hi: conds.map(function (c) { return c.hi / 100; })
+      };
+    }
+
+    // Read + validate the conditions of a tab. false = error shown, null = none set.
+    let condErrShown = false;
+    function condFail(msg) { condErrShown = true; showNotification(msg, 1); return false; }
+    function condGetCtx(scope) {
+      const r = condRead(scope);
+      if (r.error) return condFail(r.error);
+      let result = null;
+      if (r.conds.length) {
+        const ctx = condPrepare(r.conds, sourceArray.map(function (row) { return row[0]; }));
+        if (ctx.error) return condFail(ctx.error);
+        result = { ctx: ctx, text: r.text };
+      }
+      if (condErrShown) { condErrShown = false; clearNotification(); } // the earlier condition error is fixed
+      return result;
+    }
+
+    // Membership matrix (one byte per source x condition) for a list of source names.
+    function condBuild(ctx, names) {
+      const K = ctx.K, n = names.length, mem = new Uint8Array(n * K);
+      for (let i = 0; i < n; i++) {
+        const m = ctx.memByName.get(names[i]);
+        if (m) mem.set(m, i * K);
+      }
+      return { K: K, lo: ctx.lo, hi: ctx.hi, mem: mem };
+    }
+
+    function condInfeasibleMsg(nPopUsed) {
+      return 'The conditions cannot all be satisfied' + (nPopUsed ? ' with ' + nPopUsed + ' populations' : '') +
+        '. Check that the minimums add up to 100% or less and that the maximums leave enough room.';
+    }
+
+    function condViol(c, lo, hi) { return c < lo ? lo - c : (c > hi ? c - hi : 0); }
+
+    // Builds a random slot assignment that already satisfies every condition.
+    function condStart(K, mem, loC, hiC, slots, pool, sourceNum) {
+      const pn = pool.length, cur = new Int32Array(slots), cnt = new Int32Array(K);
+      for (let s = 0; s < slots; s++) {
+        const v = pool[randomFromRange(0, pn)];
+        cur[s] = v;
+        for (let k = 0; k < K; k++) cnt[k] += mem[v * K + k];
+      }
+      let V = 0;
+      for (let k = 0; k < K; k++) V += condViol(cnt[k], loC[k], hiC[k]);
+      if (V === 0) return { cur: cur, cnt: cnt };
+      const members = [];
+      for (let k = 0; k < K; k++) {
+        const list = [];
+        for (let j = 0; j < pn; j++) if (mem[pool[j] * K + k]) list.push(pool[j]);
+        members.push(list);
+      }
+      const tries = 40 * slots + 4000;
+      for (let t = 0; t < tries && V > 0; t++) {
+        let k = -1, seen = 0;
+        for (let q = 0; q < K; q++) {
+          if (condViol(cnt[q], loC[q], hiC[q]) > 0) { seen++; if (Math.random() * seen < 1) k = q; }
+        }
+        const s = randomFromRange(0, slots), a = cur[s];
+        let b;
+        if (cnt[k] < loC[k]) {
+          if (mem[a * K + k]) continue;
+          const L = members[k];
+          if (!L.length) return null;
+          b = L[randomFromRange(0, L.length)];
+        } else {
+          if (!mem[a * K + k]) continue;
+          b = pool[randomFromRange(0, pn)];
+          if (mem[b * K + k]) continue;
+        }
+        let dV = 0;
+        for (let q = 0; q < K; q++) {
+          const d = mem[b * K + q] - mem[a * K + q];
+          if (d) dV += condViol(cnt[q] + d, loC[q], hiC[q]) - condViol(cnt[q], loC[q], hiC[q]);
+        }
+        if (dV < 0) {
+          for (let q = 0; q < K; q++) cnt[q] += mem[b * K + q] - mem[a * K + q];
+          cur[s] = b;
+          V += dV;
+        }
+      }
+      return V === 0 ? { cur: cur, cnt: cnt } : null;
+    }
+
+    // Slot-count bounds for this slot total, plus a feasible starting assignment.
+    // Strict bounds (never cross a limit) are tried first; if the slot grid is too
+    // coarse for them (e.g. a very narrow range on 125 slots) the bounds are rounded.
+    function condPrepareRun(cons, slots, sourceNum) {
+      const K = cons.K, mem = cons.mem;
+      for (let pass = 0; pass < 2; pass++) {
+        const relaxed = pass === 1, loC = new Int32Array(K), hiC = new Int32Array(K);
+        let bad = false;
+        for (let k = 0; k < K; k++) {
+          let lo = cons.lo[k] * slots, hi = cons.hi[k] * slots;
+          if (relaxed) { lo = Math.round(lo); hi = Math.round(hi); }
+          else { lo = Math.ceil(lo - 1e-9); hi = Math.floor(hi + 1e-9); }
+          if (lo < 0) lo = 0;
+          if (hi > slots) hi = slots;
+          if (lo > hi) bad = true;
+          loC[k] = lo; hiC[k] = hi;
+        }
+        if (bad) continue;
+        const pool = [];
+        for (let i = 0; i < sourceNum; i++) {
+          let ok = true;
+          for (let k = 0; k < K; k++) if (hiC[k] === 0 && mem[i * K + k]) { ok = false; break; }
+          if (ok) pool.push(i);
+        }
+        if (!pool.length) continue;
+        const st = condStart(K, mem, loC, hiC, slots, pool, sourceNum);
+        if (st) return { K: K, mem: mem, loC: loC, hiC: hiC, pool: Int32Array.from(pool), cnt: st.cnt, start: st.cur, relaxed: relaxed };
+      }
+      return null;
+    }
+
+    function condSwapOK(cc, a, b) {
+      const K = cc.K, mem = cc.mem, cnt = cc.cnt;
+      for (let k = 0; k < K; k++) {
+        const d = mem[b * K + k] - mem[a * K + k];
+        if (d !== 0) {
+          const n = cnt[k] + d;
+          if (n < cc.loC[k] || n > cc.hiC[k]) return false;
+        }
+      }
+      return true;
+    }
+
+    function condApply(cc, a, b) {
+      const K = cc.K, mem = cc.mem, cnt = cc.cnt;
+      for (let k = 0; k < K; k++) cnt[k] += mem[b * K + k] - mem[a * K + k];
+    }
+
+    function fastMonteCarlo(target, source, targetId, slots, cyclesMultiplier, distColMultiplier, recalculate, sourceNum, cons) {
       let i, j, currentSlots, rankingNum, dimNum = dimensions;
       const cycles = Math.ceil(sourceNum * cyclesMultiplier / 4), scores = Array(sourceNum).fill(0),
         result = { target: targetId, distance: 0, scores },
@@ -2061,6 +2435,14 @@
       }
       const totalDim = dimNum + extraDim;
       const _W = getDistWeights();
+
+      // Weight conditions: slot-count bounds + a starting assignment that already meets them.
+      let cc = null;
+      if (cons && cons.K > 0) {
+        cc = condPrepareRun(cons, slots, sourceNum);
+        if (!cc) { result.infeasible = true; result.distance = Infinity; return result; }
+        result.relaxed = cc.relaxed;
+      }
 
       // Flatten source into one contiguous, target-centered typed-array buffer.
       // This replaces per-row subArray()/map() allocations with a single tight pass,
@@ -2099,6 +2481,15 @@
       }
 
       function randomizedSlotsInto(oldSlots, out) {
+        if (cc) {
+          const P = cc.pool, pn = P.length;
+          for (let s = 0; s < slots; s++) {
+            let v = P[randomFromRange(0, pn)];
+            if (pn > 1) while (v === oldSlots[s]) v = P[randomFromRange(0, pn)];
+            out[s] = v;
+          }
+          return;
+        }
         for (let s = 0; s < slots; s++) {
           let v = randomFromRange(0, sourceNum);
           while (v === oldSlots[s]) v = randomFromRange(0, sourceNum);
@@ -2121,8 +2512,12 @@
 
       currentSlots = new Int32Array(slots).fill(-1);
       const nextSlotsBuf = new Int32Array(slots);
-      randomizedSlotsInto(currentSlots, nextSlotsBuf);
-      currentSlots.set(nextSlotsBuf);
+      if (cc) {
+        currentSlots.set(cc.start);
+      } else {
+        randomizedSlotsInto(currentSlots, nextSlotsBuf);
+        currentSlots.set(nextSlotsBuf);
+      }
       buildPointInto(currentSlots, point);
       let currentDistance = sumSq(point, totalDim);
 
@@ -2152,7 +2547,8 @@
               nextDistance += v * v;
             }
           }
-          if (nextDistance < currentDistance) {
+          if (nextDistance < currentDistance && (!cc || condSwapOK(cc, currentSlots[j], nextSlotsBuf[j]))) {
+            if (cc) condApply(cc, currentSlots[j], nextSlotsBuf[j]);
             currentSlots[j] = nextSlotsBuf[j];
             point.set(scratch);
             currentDistance = nextDistance;
@@ -2203,7 +2599,8 @@
                   }
                 }
                 nd = Math.round(bigNumber * nd);
-                if (nd < currentDistance) {
+                if (nd < currentDistance && (!cc || condSwapOK(cc, ranking[i][0], ranking[j][0]))) {
+                  if (cc) condApply(cc, ranking[i][0], ranking[j][0]);
                   for (let c = 0; c < totalDim; c++) point[c] = point[c] - flat[oldBase + c] + flat[newBase + c];
                   ranking[i][1]--;
                   ranking[j][1]++;
@@ -2256,10 +2653,17 @@
       const results = Array(targetNum),
         addDC = (addDistColMulti > 0 ? addDistColMulti * ADC_SCALE : false);
       slots = (fastModeMulti ? 125 : 500);
+      const condInfo = condGetCtx('multi');
+      if (condInfo === false) return;
+      const condCons = condInfo ? condBuild(condInfo.ctx, sourceArray.map(function (r) { return r[0]; })) : undefined;
       for (i = 0; i < targetNum; i++) {
         source = prepareSource(slots);
         target = prepareTarget(i, slots);
-        results[i] = fastMonteCarlo(target, source, i, slots, cyclesXMulti, addDC, addDistColMultiRecal, sourceNum);
+        results[i] = fastMonteCarlo(target, source, i, slots, cyclesXMulti, addDC, addDistColMultiRecal, sourceNum, condCons);
+        if (results[i].infeasible) {
+          condFail(condInfeasibleMsg(0));
+          return;
+        }
       }
       for (i = 0; i < sourceNum; i++) {
         resultsTable[i] = Array(targetNum + 1);
@@ -2337,6 +2741,7 @@
         filters: []
       };
       outputMsg = '<div class="multiblock" data-runid="' + runId + '">' + multiFilterBarHtml(runId) +
+        (condInfo ? '<div class="condsummary">Conditions: ' + escapeHtml(condInfo.text) + (results.some(function (r) { return r.relaxed; }) ? ' (rounded to slot size)' : '') + '</div>' : '') +
         '<div class="multitablewrapper"><table><tr style="height:' + namesOffset + 'em"><td data-columnid="0" class="multiheader"><div><span onclick="sortByColumn(this, false)">Target</span></div></td><td data-columnid="1" class="multiheader" colspan="2"><div><span onclick="sortByColumn(this)">Distance' + (addDistColMulti > 0 ? " | ADC: " + adcFormat(addDistColMulti) + (addDistColMultiRecal ? " RC" : "") : "") + '</span></div></td>';
       for (i = 0; i < sourceNumLocal; i++) {
         outputMsg += '<td data-columnid="' + (i + 2) + '" class="multisources"><div><span onclick="sortByColumn(this)">' + resultsTable[i][0] + '</span></div></td>';
@@ -2820,8 +3225,11 @@
         target = prepareTarget(targetId, slots),
         source = prepareSource(slots),
         addDC = (addDistCol > 0 ? addDistCol * ADC_SCALE : false);
+      const condInfo = condGetCtx('single');
+      if (condInfo === false) return;
       if (nPop == 0) {
-        result = fastMonteCarlo(target, source, targetId, slots, cyclesX, addDC, addDistColRecal, sourceNum);
+        result = fastMonteCarlo(target, source, targetId, slots, cyclesX, addDC, addDistColRecal, sourceNum,
+          condInfo ? condBuild(condInfo.ctx, sourceArray.map(function (r) { return r[0]; })) : undefined);
         resultsTable = Array(sourceNumLocal)
         for (i = 0; i < sourceNumLocal; i++) {
           resultsTable[i] = Array(2);
@@ -2829,7 +3237,7 @@
           resultsTable[i][1] = result.scores[i];
         }
       } else {
-        result = nPops(target, source, targetId, slots, cyclesX, addDC, addDistColRecal, nPop);
+        result = nPops(target, source, targetId, slots, cyclesX, addDC, addDistColRecal, nPop, condInfo ? condInfo.ctx : null);
         sourceNumLocal = result.scores.length;
         resultsTable = Array(sourceNumLocal);
         for (i = 0; i < sourceNumLocal; i++) {
@@ -2837,6 +3245,10 @@
           resultsTable[i][0] = result.names[i];
           resultsTable[i][1] = result.scores[i];
         }
+      }
+      if (result.infeasible) {
+        condFail(condInfeasibleMsg(nPop));
+        return;
       }
       if (aggregate) {
         resultsTable = aggregateResults(resultsTable, sourceNumLocal);
@@ -2847,6 +3259,7 @@
       time = Date.now() - time;
       outputMsg = "<table><tr><th colspan='" + (addBarChart == 2 ? 3 : 2) + "' class='singleheader'>Target: <span class=\"singletargetname\">" + targetArray[targetId][0] + "</span><br/>";
       outputMsg += "Distance: " + (100 * result.distance).toFixed(4) + "% / " + result.distance.toFixed(8) + (nPop == 0 ? "" : " | R" + nPop + "P") + (addDistCol > 0 ? " | ADC: " + adcFormat(addDistCol) + (addDistColRecal ? " RC" : "") : "") + "<br/>";
+      if (condInfo) outputMsg += '<span class="condsummary">Conditions: ' + escapeHtml(condInfo.text) + (result.relaxed ? ' (rounded to slot size)' : '') + '</span><br/>';
       outputMsg += '<div class="singleinfo nonselectable" data-nonselectable="' + (nPop == 0 ? 'Sources: ' + sourceNumLocal + ' | Cycles: ' + Math.ceil(sourceNumLocal * cyclesX / 4) : 'Populations: ' + result.pops + ' | Iterations: ' + result.iter) + ' | Time: ' + time / 1000 + '&nbsp;s' + '"></div>';
       outputMsg += "</th></tr>";
       for (i = 0, n = resultsTable.length; i < n; i++) {
@@ -2984,6 +3397,18 @@
           sourceOptions += '<option value="' + sourceArray[i][0] + '">';
         }
         document.getElementById("oraclesourcelist").innerHTML = sourceOptions;
+
+        const condSeen = new Set();
+        let condOptions = "";
+        for (i = 0; i < sourceNum; i++) {
+          const pre = sourceArray[i][0].split(':')[0];
+          if (!condSeen.has(pre)) { condSeen.add(pre); condOptions += '<option value="' + escapeHtml(pre) + '">'; }
+        }
+        for (i = 0; i < sourceNum; i++) {
+          const nm = sourceArray[i][0];
+          if (!condSeen.has(nm)) { condSeen.add(nm); condOptions += '<option value="' + escapeHtml(nm) + '">'; }
+        }
+        document.getElementById("condsourcelist").innerHTML = condOptions;
 
         for (i = 0; i < targetNum; i++) {
           targets = targets + '<button class="buttons button100" onclick="dispatcher(this,' + i + ')">' + targetArray[i][0] + '</button>';
@@ -5349,6 +5774,7 @@ Search is case sensitive.
           <button class="buttons button100" onclick="toggleOptions(&#39;oracleFixedRangemode&#39;, this)">weight&nbsp;limits&nbsp;-&nbsp;constrain</button>
         </div>
         <datalist id="oraclesourcelist"></datalist>
+        <datalist id="condsourcelist"></datalist>
 
         <button class="buttons button80" onclick="this.nextElementSibling.focus()">max&nbsp;output&nbsp;number:</button><!--
         --><input spellcheck="false" class="buttons input20" id="oraclemaxout" value="25" onblur="validateDistMaxOut(this)">
@@ -5391,6 +5817,17 @@ Search is case sensitive.
           <div class="adcticklabels"><span>off</span><span>0.5x</span><span>1x</span><span>1.5x</span><span>2x</span></div>
         </div><!--
         --><button id="adcrecal" disabled="" class="buttons button100" onclick="toggleOptions(&#39;addDistColRecal&#39;, this)">recalculate&nbsp;-&nbsp;yes</button><!--
+        --><div class="condgroup">
+          <div class="condhead">
+            <div class="ctrlgroup-title">weight conditions <span id="singleCondCount"></span><span class="info-pop" tabindex="0" data-tooltip="No conditions: every population can take any weight. Add one to set a minimum, maximum, or a range. Use a full line name (Spain:IA) or the aggregate name (Spain).">i</span></div>
+            <div class="condbtns">
+              <button type="button" class="buttons" id="singleCondClear" style="display:none" onclick="condClear('single')">clear</button>
+              <button type="button" class="buttons" onclick="condAddRow('single')">+ add</button>
+            </div>
+          </div>
+          <div class="condlist" id="singleCondList" data-scope="single"></div>
+        </div>
+<!--
         --><button class="buttons button100" onclick="toggleOptions(&#39;printZeroes&#39;, this)">print
           zeroes&nbsp;-&nbsp;no</button><!--
         --><button class="buttons button100" onclick="toggleOptions(&#39;aggregate&#39;, this)">aggregate&nbsp;-&nbsp;yes</button><!--
@@ -5578,6 +6015,17 @@ Source_2,0.0388,-0.0241,..."></textarea>
         <button id="runmulti" disabled="" class="buttons buttonmulti" onclick="multiFMC()">run</button>
       </div>
     </div>
+    <div class="condgroup condgroup-multi">
+          <div class="condhead">
+            <div class="ctrlgroup-title">weight conditions <span id="multiCondCount"></span><span class="info-pop" tabindex="0" data-tooltip="No conditions: every population can take any weight. Add one to set a minimum, maximum, or a range. Use a full line name (Spain:IA) or the aggregate name (Spain).">i</span></div>
+            <div class="condbtns">
+              <button type="button" class="buttons" id="multiCondClear" style="display:none" onclick="condClear('multi')">clear</button>
+              <button type="button" class="buttons" onclick="condAddRow('multi')">+ add</button>
+            </div>
+          </div>
+          <div class="condlist" id="multiCondList" data-scope="multi"></div>
+        </div>
+
     <div id="multioutput"></div>
   </div>
   <div class="tab" id="aadr" style="display: none; height: calc(100% - 6.6em);">
