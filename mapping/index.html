@@ -424,7 +424,7 @@
   #statusBar b{color:var(--text-0);}
   #statusBar.warn{color:#e0b467; border-color:#5a4a2a;}
 
-  .g25-heat-canvas{pointer-events:none;}
+  .g25-heat-canvas{pointer-events:none; transform-origin:0 0;}
 
   select{ -webkit-appearance:none; appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%23a4acbd'/></svg>"); background-repeat:no-repeat; background-position:right 10px center; padding-right:26px;}
 
@@ -585,9 +585,26 @@
     </div>
 
     <div class="panel">
+      <h2>Presets</h2>
+      <select id="presetSelect"><option value="">— none saved —</option></select>
+      <div class="btn-row">
+        <button id="loadPresetBtn" class="small">Load</button>
+        <button id="savePresetBtn" class="small">Save current…</button>
+        <button id="deletePresetBtn" class="small">Delete</button>
+      </div>
+      <div class="btn-row">
+        <button id="exportPresetsBtn" class="small ghost">Export all (.json)</button>
+        <button id="importPresetsBtn" class="small ghost">Import…</button>
+      </div>
+      <input type="file" id="importFileInput" accept="application/json" style="display:none;">
+    </div>
+
+    <div class="panel">
       <h2 id="targetSourceHeading">Target</h2>
-      <label class="field-label" id="targetSourceInputLabel">Paste one or more G25 lines — <span style="color:var(--text-2)">Name,c1,c2,…,c25</span></label><label class="field-label" id="targetSourceInputLabel"><textarea id="targetInput" placeholder="Target,0.0123,-0.0456,0.0789,..."></textarea><span style="color: rgb(232, 235, 241); font-size: 12px">
-      </span><button id="setTargetBtn" style="width: 100%; margin-top: 8px;">Set target</button></label><div id="sourceSelectorWrap" style="display:none; margin-top:10px;">
+      <label class="field-label" id="targetSourceInputLabel" for="targetInput">Paste one G25 line — <span style="color:var(--text-2)">Name,c1,c2,…,c25</span></label>
+      <textarea id="targetInput" placeholder="Target,0.0123,-0.0456,0.0789,..." spellcheck="false"></textarea>
+      <div class="hint" id="targetAutoHint">Detected automatically as you paste or type — no button needed.</div>
+      <div id="sourceSelectorWrap" style="display:none; margin-top:10px;">
         <label class="field-label">Source populations to map</label>
         <div class="hint">Use the ◎ button on each source to include/exclude it from the mapped admixture.</div>
       </div>
@@ -597,7 +614,7 @@
     </div>
 
     <div class="panel">
-      <h2>Reference populations <span class="count" id="popCount">0</span></h2>
+      <h2>Map Editor <span class="count" id="popCount">0</span></h2>
       <label class="field-label">Paste one or more G25 lines (one per population)</label>
       <textarea id="popInput" placeholder="Iberia_IA,0.0113,-0.0402,...
 Yamnaya,0.0301,0.0117,..."></textarea>
@@ -624,21 +641,6 @@ Yamnaya,0.0301,0.0117,..."></textarea>
         <input type="range" id="labelSizeSlider" min="7" max="18" step="1" value="10">
         <div class="val" id="labelSizeVal">10px</div>
       </div>
-    </div>
-
-    <div class="panel">
-      <h2>Presets</h2>
-      <select id="presetSelect"><option value="">— none saved —</option></select>
-      <div class="btn-row">
-        <button id="loadPresetBtn" class="small">Load</button>
-        <button id="savePresetBtn" class="small">Save current…</button>
-        <button id="deletePresetBtn" class="small">Delete</button>
-      </div>
-      <div class="btn-row">
-        <button id="exportPresetsBtn" class="small ghost">Export all (.json)</button>
-        <button id="importPresetsBtn" class="small ghost">Import…</button>
-      </div>
-      <input type="file" id="importFileInput" accept="application/json" style="display:none;">
     </div>
 
     <div class="panel">
@@ -733,7 +735,7 @@ Yamnaya,0.0301,0.0117,..."></textarea>
         <button id="clearHeatBtn" class="ghost small">Clear map</button>
         <button id="clearAllBtn" class="ghost small">Reset everything<br></button>
       </div>
-      <div class="hint">After generating the map, moving around or zooming in/out might cause lag in <span style="font-style:italic">"Balanced"</span> and <span style="font-style:italic">"Detailed"</span> rendering quality. To avoid this, clicking on <span style="font-style:italic">"Clear map" </span>is recommended.</div>
+      <div class="hint">Pan and zoom freely — the current map image moves with you and refreshes once you stop.</div>
       <div id="genHint" class="hint"></div>
     </div>
 
@@ -1080,50 +1082,92 @@ function blurValueGrid(values, w, h, radius) {
    even when that third category is nowhere near. Instead, IDW-interpolate
    each source's own RGB color directly, weighted by the same inverse-distance
    weights used for the scalar grid, so only genuinely nearby colors ever mix. */
-function computeCloserColorGrid(pts, gw, gh, step, power) {
-  const gR = new Float32Array(gw * gh), gG = new Float32Array(gw * gh), gB = new Float32Array(gw * gh);
-  for (let gy = 0; gy < gh; gy++) {
-    const py = gy * step;
+/* Inverse-distance weight 1/d^power, expressed in squared pixel distance.
+   The common slider powers skip Math.pow, which otherwise dominates the
+   inner loop — same numbers, several times faster. */
+function idwWeightFn(power) {
+  const h = power / 2;
+  if (h === 0.5) return d2 => 1 / Math.sqrt(d2);
+  if (h === 1) return d2 => 1 / d2;
+  if (h === 1.5) return d2 => 1 / (d2 * Math.sqrt(d2));
+  if (h === 2) return d2 => 1 / (d2 * d2);
+  if (h === 2.5) return d2 => 1 / (d2 * d2 * Math.sqrt(d2));
+  if (h === 3) return d2 => 1 / (d2 * d2 * d2);
+  return d2 => Math.pow(d2, -h);
+}
+/* Packs projected points into flat typed arrays for the hot loops below. */
+function packIdwPoints(pts) {
+  const n = pts.length;
+  const xs = new Float64Array(n), ys = new Float64Array(n), vs = new Float64Array(n);
+  const rs = new Float64Array(n), gs = new Float64Array(n), bs = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const p = pts[i];
+    xs[i] = p.x; ys[i] = p.y; vs[i] = p.v || 0;
+    if (p.color) { rs[i] = p.color[0]; gs[i] = p.color[1]; bs[i] = p.color[2]; }
+  }
+  return { n, xs, ys, vs, rs, gs, bs };
+}
+/* Plain IDW value grid — straight-line pixel distance, water and all.
+   Fills rows gy0..gy1-1 so the live layer can spread the work over frames. */
+function idwValueRows(P, gw, step, power, gy0, gy1, out) {
+  const { n, xs, ys, vs } = P;
+  const wf = idwWeightFn(power);
+  for (let gy = gy0; gy < gy1; gy++) {
+    const py = gy * step, row = gy * gw;
     for (let gx = 0; gx < gw; gx++) {
       const px = gx * step;
-      let wSum = 0, rSum = 0, gSum = 0, bSum = 0, exact = null;
-      for (let i = 0; i < pts.length; i++) {
-        const dx = px - pts[i].x, dy = py - pts[i].y;
+      let wSum = 0, vSum = 0, exact = -1;
+      for (let i = 0; i < n; i++) {
+        const dx = px - xs[i], dy = py - ys[i];
         const d2 = dx * dx + dy * dy;
-        if (d2 < 0.25) { exact = pts[i].color; break; }
-        const w = 1 / Math.pow(d2, power / 2);
+        if (d2 < 0.25) { exact = i; break; }
+        const w = wf(d2);
         wSum += w;
-        rSum += w * pts[i].color[0];
-        gSum += w * pts[i].color[1];
-        bSum += w * pts[i].color[2];
+        vSum += w * vs[i];
       }
-      const gi = gy * gw + gx;
-      if (exact) { gR[gi] = exact[0]; gG[gi] = exact[1]; gB[gi] = exact[2]; }
+      out[row + gx] = exact >= 0 ? vs[exact] : vSum / wSum;
+    }
+  }
+}
+/* "Closer to" is a categorical classification (each pixel's nearest source),
+   not a continuous quantity. Interpolating a category *index* and mapping the
+   blurred result through an ordered palette can land on a third category's
+   color at a boundary between two other, non-adjacent-in-list categories —
+   even when that third category is nowhere near. Instead, IDW-interpolate
+   each source's own RGB color directly, weighted by the same inverse-distance
+   weights used for the scalar grid, so only genuinely nearby colors ever mix. */
+function idwColorRows(P, gw, step, power, gy0, gy1, gR, gG, gB) {
+  const { n, xs, ys, rs, gs, bs } = P;
+  const wf = idwWeightFn(power);
+  for (let gy = gy0; gy < gy1; gy++) {
+    const py = gy * step, row = gy * gw;
+    for (let gx = 0; gx < gw; gx++) {
+      const px = gx * step;
+      let wSum = 0, rSum = 0, gSum = 0, bSum = 0, exact = -1;
+      for (let i = 0; i < n; i++) {
+        const dx = px - xs[i], dy = py - ys[i];
+        const d2 = dx * dx + dy * dy;
+        if (d2 < 0.25) { exact = i; break; }
+        const w = wf(d2);
+        wSum += w;
+        rSum += w * rs[i];
+        gSum += w * gs[i];
+        bSum += w * bs[i];
+      }
+      const gi = row + gx;
+      if (exact >= 0) { gR[gi] = rs[exact]; gG[gi] = gs[exact]; gB[gi] = bs[exact]; }
       else { gR[gi] = rSum / wSum; gG[gi] = gSum / wSum; gB[gi] = bSum / wSum; }
     }
   }
+}
+function computeCloserColorGrid(pts, gw, gh, step, power) {
+  const gR = new Float32Array(gw * gh), gG = new Float32Array(gw * gh), gB = new Float32Array(gw * gh);
+  idwColorRows(packIdwPoints(pts), gw, step, power, 0, gh, gR, gG, gB);
   return { gR, gG, gB };
 }
-
-/* Plain IDW value grid — straight-line pixel distance, water and all. */
 function computeIdwValueGrid(pts, gw, gh, step, power) {
   const valGrid = new Float32Array(gw * gh);
-  for (let gy = 0; gy < gh; gy++) {
-    const py = gy * step;
-    for (let gx = 0; gx < gw; gx++) {
-      const px = gx * step;
-      let wSum = 0, vSum = 0, exact = null;
-      for (let i = 0; i < pts.length; i++) {
-        const dx = px - pts[i].x, dy = py - pts[i].y;
-        const d2 = dx * dx + dy * dy;
-        if (d2 < 0.25) { exact = pts[i].v; break; }
-        const w = 1 / Math.pow(d2, power / 2);
-        wSum += w;
-        vSum += w * pts[i].v;
-      }
-      valGrid[gy * gw + gx] = exact !== null ? exact : (vSum / wSum);
-    }
-  }
+  idwValueRows(packIdwPoints(pts), gw, step, power, 0, gh, valGrid);
   return valGrid;
 }
 
@@ -1184,52 +1228,71 @@ function getCachedLandPath(key, build) {
 }
 
 /* =========================================================================
-   Custom canvas heat layer with land clipping
+   Custom canvas heat layer with land clipping.
+
+   Panning and zooming never recompute the surface. The last rendered image
+   rides along with the map — Leaflet translates the pane while dragging, and
+   zoom is applied as a CSS scale exactly like the base tiles — so moving
+   around stays smooth however many populations are placed. Once the view has
+   been still for HEAT_SETTLE_MS the surface is recomputed for the new view in
+   short time slices (the page stays responsive throughout), and any new
+   pan/zoom simply cancels a recompute that is still running.
    ========================================================================= */
+const HEAT_VIEW_PAD = 0.15;   // also render this share of the view beyond each edge, so short pans never show a blank strip
+const HEAT_SETTLE_MS = 180;   // quiet time after the last pan/zoom before recomputing
+const HEAT_SLICE_MS = 12;     // max main-thread time per slice of interpolation work
+
 const HeatLayer = L.Layer.extend({
+  initialize() {
+    this._points = [];
+    this._min = 0; this._max = 1; this._power = 2; this._step = 3; this._opacity = 0.86; this._blur = 0;
+    this._gridCache = null;       // last interpolated grid (raw values), keyed by view + step + power
+    this._blurCache = new Map();  // blurred variants of _gridCache, keyed by radius
+    this._drawn = null;           // {px, zoom}: absolute pixel position of what the canvas currently shows
+    this._job = 0;                // bumping this cancels any in-flight recompute
+    this._timer = null;
+  },
   onAdd(map) {
     this._map = map;
     this._canvas = L.DomUtil.create('canvas', 'g25-heat-canvas');
+    if (map._zoomAnimated) L.DomUtil.addClass(this._canvas, 'leaflet-zoom-animated');
     this._ctx = this._canvas.getContext('2d');
+    this._canvas.style.opacity = this._opacity;
     map.getPanes().overlayPane.appendChild(this._canvas);
-    map.on('moveend zoomend resize', this._reset, this);
-    this._points = [];
-    this._min = 0; this._max = 1; this._power = 2; this._step = 3; this._opacity = 0.86; this._blur = 0;
-    // Cache expensive stages so parameter-only redraws reuse prior work.
-    this._projectedPoints = null;
-    this._projectedPointsKey = null;
-    this._gridCache = null;
-    this._blurCache = new Map();
-    this._gridCacheColor = null;
-    this._blurCacheColor = new Map();
     this._smallCanvas = document.createElement('canvas');
+    this._smallImageData = null;
     this._maskCanvas = document.createElement('canvas');
     this._maskCtx = this._maskCanvas.getContext('2d');
-    this._smallImageData = null;
     this._maskKey = null;
-    this._canvas.style.opacity = this._opacity;
-    this._reset();
+    map.on(this._mapEvents(), this);
+    this._render();
   },
   onRemove(map) {
+    this._cancel();
+    map.off(this._mapEvents(), this);
     L.DomUtil.remove(this._canvas);
-    map.off('moveend zoomend resize', this._reset, this);
+  },
+  _mapEvents() {
+    return {
+      movestart: this._cancel,
+      zoomstart: this._cancel,
+      zoom: this._onZoom,
+      viewreset: this._onZoom,
+      zoomanim: this._onAnimZoom,
+      moveend: this._onSettle,
+      resize: this._onSettle,
+    };
   },
   setData(points, min, max, power, step, blur) {
-    const pointsChanged = this._points !== points;
+    if (this._points !== points) {
+      this._gridCache = null;
+      this._blurCache.clear();
+    }
     this._points = points;
     this._min = min; this._max = max;
     this._power = power; this._step = step;
     this._blur = blur || 0;
-    if (pointsChanged) {
-      this._projectedPoints = null;
-      this._projectedPointsKey = null;
-      this._gridCache = null;
-      this._blurCache.clear();
-      this._gridCacheColor = null;
-      this._blurCacheColor.clear();
-      this._maskKey = null;
-    }
-    this._reset();
+    this._render();
   },
   setOpacity(v) {
     this._opacity = v;
@@ -1237,169 +1300,175 @@ const HeatLayer = L.Layer.extend({
   },
   clear() {
     this._points = [];
-    this._projectedPoints = null;
-    this._projectedPointsKey = null;
     this._gridCache = null;
     this._blurCache.clear();
-    this._gridCacheColor = null;
-    this._blurCacheColor.clear();
-    this._maskKey = null;
-    this._reset();
+    this._render();
   },
-  _reset() {
-    if (!this._map) return;
-    const size = this._map.getSize();
-    const topLeft = this._map.containerPointToLayerPoint([0, 0]);
-    L.DomUtil.setPosition(this._canvas, topLeft);
-    this._canvas.width = size.x;
-    this._canvas.height = size.y;
-    this._topLeft = topLeft;
-    this._draw();
-  },
-  _draw() {
-    const ctx = this._ctx;
-    const W = this._canvas.width, H = this._canvas.height;
-    ctx.clearRect(0, 0, W, H);
-    if (!this._points.length) return;
+  // Kept for existing callers: redraw now with the current parameters.
+  _reset() { this._render(); },
 
+  /* ---- view tracking ---- */
+  _cancel() {
+    clearTimeout(this._timer);
+    this._timer = null;
+    this._job++;
+  },
+  _onSettle() {
+    this._onZoom();
+    this._cancel();
+    this._timer = setTimeout(() => { this._timer = null; this._render(); }, HEAT_SETTLE_MS);
+  },
+  _onZoom() {
+    if (this._map) this._updateTransform(this._map.getCenter(), this._map.getZoom());
+  },
+  _onAnimZoom(e) {
+    this._updateTransform(e.center, e.zoom);
+  },
+  // Places/scales the already-drawn canvas for any view (same math Leaflet's
+  // own vector renderer uses), so it tracks the map without being redrawn.
+  _updateTransform(center, zoom) {
+    if (!this._drawn || !this._map) return;
     const map = this._map;
-    const topLeft = this._topLeft;
+    const scale = map.getZoomScale(zoom, this._drawn.zoom);
+    const offset = this._drawn.px.multiplyBy(scale).subtract(map._getNewPixelOrigin(center, zoom));
+    L.DomUtil.setTransform(this._canvas, offset, scale);
+  },
 
-    // Project reference points only when the actual map view changes.
-    const pointKey = getLandViewKey(map, { x: W, y: H }) + '|' + topLeft.x + '|' + topLeft.y;
-    let pts = this._projectedPoints;
-    if (!pts || this._projectedPointsKey !== pointKey) {
-      pts = this._points.map(p => {
-        const lp = map.latLngToLayerPoint([p.lat, p.lng]).subtract(topLeft);
-        return { x: lp.x, y: lp.y, v: p.value, color: p.color };
-      });
-      this._projectedPoints = pts;
-      this._projectedPointsKey = pointKey;
+  /* ---- rendering ---- */
+  _render() {
+    this._cancel();
+    const map = this._map;
+    if (!map) return;
+    const token = this._job;
+    if (!this._points.length) {
+      this._canvas.width = 0; this._canvas.height = 0;
+      this._drawn = null;
+      return;
+    }
+    const size = map.getSize();
+    if (!size.x || !size.y) return;
+
+    // Snapshot the view in absolute pixel coordinates, so nothing below
+    // depends on Leaflet's pixel origin staying put.
+    const padX = Math.round(size.x * HEAT_VIEW_PAD), padY = Math.round(size.y * HEAT_VIEW_PAD);
+    const W = size.x + padX * 2, H = size.y + padY * 2;
+    const zoom = map.getZoom();
+    const px = map.getPixelOrigin().add(map.containerPointToLayerPoint([-padX, -padY]));
+    const proj = (lat, lng) => map.project([lat, lng], zoom)._round()._subtract(px);
+    const view = { W, H, zoom, px, proj, key: [px.x, px.y, zoom, W, H].join('|') };
+
+    const step = this._step, power = this._power;
+    const pts = this._points.map(p => { const q = proj(p.lat, p.lng); return { x: q.x, y: q.y, v: p.value, color: p.color }; });
+    const closer = pts[0].color != null;
+    const gw = Math.max(1, Math.ceil(W / step)), gh = Math.max(1, Math.ceil(H / step));
+    const gridKey = view.key + '|' + step + '|' + power + '|' + (closer ? 'closer' : 'value');
+
+    // Colour, band, opacity and smoothing changes reuse the interpolated grid.
+    if (this._gridCache && this._gridCache.key === gridKey) {
+      this._finish(view, this._gridCache);
+      return;
     }
 
-    // Land geometry for this view is needed twice — to build the water-blocking
-    // grid and to mask the finished surface — so project it once, up front.
-    const maskKey = getLandViewKey(map, { x: W, y: H });
-    const landPath = getCachedLandPath(maskKey, () => buildScaledLandPath(
-      (lat, lng) => map.latLngToLayerPoint([lat, lng]).subtract(topLeft)
-    ));
+    const P = packIdwPoints(pts);
+    const N = gw * gh;
+    const grid = closer
+      ? { key: gridKey, closer, gw, gh, gR: new Float32Array(N), gG: new Float32Array(N), gB: new Float32Array(N) }
+      : { key: gridKey, closer, gw, gh, values: new Float32Array(N) };
+    let gy = 0;
+    const work = () => {
+      if (token !== this._job) return; // superseded by a pan/zoom or a newer render
+      const t0 = performance.now();
+      while (gy < gh) {
+        if (closer) idwColorRows(P, gw, step, power, gy, gy + 1, grid.gR, grid.gG, grid.gB);
+        else idwValueRows(P, gw, step, power, gy, gy + 1, grid.values);
+        gy++;
+        if (performance.now() - t0 > HEAT_SLICE_MS) break;
+      }
+      if (gy < gh) { this._timer = setTimeout(work, 0); return; }
+      this._timer = null;
+      this._gridCache = grid;
+      this._blurCache.clear();
+      this._finish(view, grid);
+    };
+    work();
+  },
+  _blurredGrid(grid, r) {
+    if (!(r > 0)) return grid;
+    const cached = this._blurCache.get(r);
+    if (cached && cached.src === grid) return cached;
+    const { gw, gh } = grid;
+    const out = grid.closer
+      ? { src: grid, gR: blurValueGrid(grid.gR, gw, gh, r), gG: blurValueGrid(grid.gG, gw, gh, r), gB: blurValueGrid(grid.gB, gw, gh, r) }
+      : { src: grid, values: blurValueGrid(grid.values, gw, gh, r) };
+    this._blurCache.set(r, out);
+    while (this._blurCache.size > 6) this._blurCache.delete(this._blurCache.keys().next().value);
+    return out;
+  },
+  _finish(view, grid) {
+    const { W, H } = view, { gw, gh } = grid;
 
-    // ---- low-res IDW grid, rendered then upscaled for smoothness ----
-    const step = this._step;
-    const gw = Math.max(1, Math.ceil(W / step));
-    const gh = Math.max(1, Math.ceil(H / step));
+    // ---- colourise the low-res grid ----
     const small = this._smallCanvas;
-    if (small.width !== gw || small.height !== gh) {
-      small.width = gw; small.height = gh;
-    }
+    if (small.width !== gw || small.height !== gh) { small.width = gw; small.height = gh; }
     const sctx = small.getContext('2d');
-    const power = this._power;
-    const isCloserColor = pts.length > 0 && pts[0].color != null;
-
     if (!this._smallImageData || this._smallImageData.width !== gw || this._smallImageData.height !== gh) {
       this._smallImageData = sctx.createImageData(gw, gh);
     }
-    const img = this._smallImageData;
-
-    if (isCloserColor) {
-      // Categorical "closer to" data: blend each source's actual color by
-      // spatial proximity instead of mapping a scalar index through a palette.
-      const gridKey = pointKey + '|' + step + '|' + power + '|closer';
-      let grids = this._gridCacheColor;
-      if (!grids || grids.key !== gridKey) {
-        const { gR, gG, gB } = computeCloserColorGrid(pts, gw, gh, step, power);
-        grids = { key: gridKey, gR, gG, gB };
-        this._gridCacheColor = grids;
-        this._blurCacheColor.clear();
-      }
-      let { gR, gG, gB } = grids;
-      const blurKey = Math.round(this._blur * 2) / 2;
-      if (blurKey > 0) {
-        const cached = this._blurCacheColor.get(blurKey);
-        if (cached) { gR = cached.gR; gG = cached.gG; gB = cached.gB; }
-        else {
-          const blurred = { gR: blurValueGrid(gR, gw, gh, blurKey), gG: blurValueGrid(gG, gw, gh, blurKey), gB: blurValueGrid(gB, gw, gh, blurKey) };
-          this._blurCacheColor.set(blurKey, blurred);
-          while (this._blurCacheColor.size > 6) this._blurCacheColor.delete(this._blurCacheColor.keys().next().value);
-          gR = blurred.gR; gG = blurred.gG; gB = blurred.gB;
-        }
-      }
+    const img = this._smallImageData, data = img.data;
+    const g = this._blurredGrid(grid, Math.round(this._blur * 2) / 2);
+    if (grid.closer) {
+      const { gR, gG, gB } = g;
       for (let i = 0; i < gw * gh; i++) {
         const idx = i * 4;
-        img.data[idx] = Math.max(0, Math.min(255, Math.round(gR[i])));
-        img.data[idx + 1] = Math.max(0, Math.min(255, Math.round(gG[i])));
-        img.data[idx + 2] = Math.max(0, Math.min(255, Math.round(gB[i])));
-        img.data[idx + 3] = 255;
+        data[idx] = Math.max(0, Math.min(255, Math.round(gR[i])));
+        data[idx + 1] = Math.max(0, Math.min(255, Math.round(gG[i])));
+        data[idx + 2] = Math.max(0, Math.min(255, Math.round(gB[i])));
+        data[idx + 3] = 255;
       }
     } else {
-      const min = this._min, max = this._max;
-      const range = (max - min) || 1;
-      const gridKey = pointKey + '|' + step + '|' + power + '|' + min + '|' + max;
-
-      let valGrid;
-      if (this._gridCache && this._gridCache.key === gridKey) {
-        valGrid = this._gridCache.grid;
-      } else {
-        valGrid = computeIdwValueGrid(pts, gw, gh, step, power);
-        this._gridCache = { key: gridKey, grid: valGrid, w: gw, h: gh };
-        this._blurCache.clear();
-      }
-
-      // Smoothness changes only the blur. Keep recent radii so slider backtracking
-      // doesn't redo identical full-grid blur passes.
-      let blurredGrid = valGrid;
-      const blurKey = Math.round(this._blur * 2) / 2;
-      if (blurKey > 0) {
-        const cached = this._blurCache.get(blurKey);
-        if (cached) blurredGrid = cached;
-        else {
-          blurredGrid = blurValueGrid(valGrid, gw, gh, blurKey);
-          this._blurCache.set(blurKey, blurredGrid);
-          while (this._blurCache.size > 6) this._blurCache.delete(this._blurCache.keys().next().value);
-        }
-      }
-
+      const vals = g.values;
+      const min = this._min, range = (this._max - this._min) || 1;
       for (let i = 0; i < gw * gh; i++) {
-        const t = (blurredGrid[i] - min) / range;
+        const t = (vals[i] - min) / range;
         const idx = i * 4;
         if (bandsEnabled) {
           const e = encodeT(t);
-          img.data[idx] = e; img.data[idx + 1] = e; img.data[idx + 2] = e;
+          data[idx] = e; data[idx + 1] = e; data[idx + 2] = e;
         } else {
-          const [r, g, b] = colorAtMapValue(t);
-          img.data[idx] = r; img.data[idx + 1] = g; img.data[idx + 2] = b;
+          const [r, gg, b] = colorAtMapValue(t);
+          data[idx] = r; data[idx + 1] = gg; data[idx + 2] = b;
         }
-        img.data[idx + 3] = 255;
+        data[idx + 3] = 255;
       }
     }
     sctx.putImageData(img, 0, 0);
 
+    // ---- upscale onto the visible canvas ----
+    const canvas = this._canvas, ctx = this._ctx;
+    canvas.width = W; canvas.height = H;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(small, 0, 0, gw, gh, 0, 0, W, H);
-    if (bandsEnabled && !isCloserColor) paintBandsFullRes(ctx, W, H, Math.min(8, Math.max(1, Math.round(step / 2))), contourLineWidth);
+    if (bandsEnabled && !grid.closer) paintBandsFullRes(ctx, W, H, Math.min(8, Math.max(1, Math.round(this._step / 2))), contourLineWidth);
 
-    // ---- land mask ----
-    // The rasterized mask is also cached: smoothness/power/quality changes do not
-    // need to refill a full-size canvas with the coastline geometry.
-    const maskCanvas = this._maskCanvas;
-    if (maskCanvas.width !== W || maskCanvas.height !== H || this._maskKey !== maskKey) {
-      if (maskCanvas.width !== W || maskCanvas.height !== H) {
-        maskCanvas.width = W;
-        maskCanvas.height = H;
-      }
+    // ---- land mask (cached per view) ----
+    const mask = this._maskCanvas;
+    if (this._maskKey !== view.key || mask.width !== W || mask.height !== H) {
+      mask.width = W; mask.height = H;
       const mctx = this._maskCtx;
       mctx.clearRect(0, 0, W, H);
       mctx.fillStyle = '#fff';
-      mctx.fill(landPath, 'evenodd');
-      this._maskKey = maskKey;
+      mctx.fill(buildScaledLandPath(view.proj), 'evenodd');
+      this._maskKey = view.key;
     }
-
     ctx.globalCompositeOperation = 'destination-in';
-    ctx.drawImage(maskCanvas, 0, 0);
+    ctx.drawImage(mask, 0, 0);
     ctx.globalCompositeOperation = 'source-over';
 
-    // user-adjustable opacity for readability against basemap
-    this._canvas.style.opacity = this._opacity;
+    canvas.style.opacity = this._opacity;
+    this._drawn = { px: view.px, zoom: view.zoom };
+    this._onZoom();
   },
 });
 
@@ -1659,6 +1728,7 @@ function hexToRgbLocal(hex) {
 function removeSource(index) {
   if (index < 0 || index >= sources.length) return;
   sources.splice(index, 1);
+  writeSourcesToInput();
   selectedSourceIndices = selectedSourceIndices.filter(i => i !== index).map(i => i > index ? i - 1 : i);
   // Keep remaining sources unselected unless the user explicitly selected them.
   renderSourceSelector();
@@ -1670,6 +1740,7 @@ function renameSource(index, newName) {
   const rec = sources[index];
   if (!rec || !newName.trim()) { renderSourceSelector(); return; }
   rec.name = newName.trim();
+  writeSourcesToInput();
   renderSourceSelector();
 }
 
@@ -1752,7 +1823,7 @@ function renderSourceSelector() {
     ? `${sources.length} source${sources.length === 1 ? '' : 's'} loaded${selectedSourceIndices.length ? ` · mapping ${selectedSourceIndices.map(i => sources[i]?.name).filter(Boolean).join(' + ')}` : ' · select sources to map'}`
     : closer
       ? `${sources.length} source${sources.length === 1 ? '' : 's'} loaded${selectedSourceIndices.length ? ` · comparing ${selectedSourceIndices.map(i => sources[i]?.name).filter(Boolean).join(' vs ')}` : ' · select sources to compare'}`
-      : `Target: ${target.name} (${target.vec.length} dims)`;
+      : `Target: ${target.name} (${target.vec.length} dims)${sources.length > 1 ? ` · ${sources.length} lines pasted, using the first` : ''}`;
   statusEl.classList.add('set');
 }
 
@@ -1760,28 +1831,43 @@ function sourceLinesMatch(a, b) {
   return a.name === b.name && a.vec.length === b.vec.length && a.vec.every((v, i) => v === b.vec[i]);
 }
 
-document.getElementById('setTargetBtn').addEventListener('click', () => {
-  const text = document.getElementById('targetInput').value;
-  const parsed = parseG25Block(text);
-  if (!parsed.length) return;
-  if (currentMode === 'distance') {
-    // Distance mode still has a single target; a new paste replaces it.
-    sources = [normalizeSource(parsed[0], 0)];
-    selectedSourceIndices = [];
-    target = sources[0];
-  } else {
-    // Admixture/closer: add incrementally. Existing sources, their
-    // selection state, and their assigned colors are left untouched;
-    // duplicate entries (same name + vector) are skipped; newly added
-    // sources start unselected.
-    parsed.forEach(p => {
-      if (sources.some(existing => sourceLinesMatch(existing, p))) return;
-      sources.push(normalizeSource(p, sources.length));
-    });
-  }
+/* The target box is the single source of truth for the target (distance
+   mode) or the source list (admixture / closer-to): it is re-read on every
+   edit, so pasting a line sets the target immediately — no button. Lines that
+   are still present keep their colour and map selection (matched by the exact
+   line first, then by name). Exact duplicate lines are ignored. */
+function sourcesToText(list) {
+  return list.map(s => `${s.name},${s.vec.join(',')}`).join('\n');
+}
+function writeSourcesToInput() {
+  document.getElementById('targetInput').value = sourcesToText(sources);
+}
+function syncSourcesFromInput() {
+  const parsed = parseG25Block(document.getElementById('targetInput').value);
+  const prev = sources;
+  const prevSelected = new Set(selectedSourceIndices.map(i => prev[i]).filter(Boolean));
+  const claimed = new Set();
+  const entries = [];
+  parsed.forEach(p => {
+    if (entries.some(e => sourceLinesMatch(e.p, p))) return;
+    const match = prev.find(s => !claimed.has(s) && sourceLinesMatch(s, p))
+      || prev.find(s => !claimed.has(s) && s.name === p.name);
+    if (match) claimed.add(match);
+    entries.push({ p, match });
+  });
+  const usedColors = new Set(entries.filter(e => e.match).map(e => e.match.color.toLowerCase()));
+  const freeColors = DEFAULT_SOURCE_COLORS.filter(c => !usedColors.has(c.toLowerCase()));
+  const next = [], nextSelected = [];
+  entries.forEach(({ p, match }, i) => {
+    const color = match ? match.color : (freeColors.shift() || getSourceColor(i));
+    if (match && prevSelected.has(match)) nextSelected.push(next.length);
+    next.push(normalizeSource({ name: p.name, vec: p.vec, color }, next.length));
+  });
+  sources = next;
+  selectedSourceIndices = nextSelected;
   renderSourceSelector();
-  document.getElementById('targetInput').value = '';
-});
+}
+document.getElementById('targetInput').addEventListener('input', syncSourcesFromInput);
 
 
 document.getElementById('sourceList').addEventListener('click', e => {
@@ -1866,12 +1952,11 @@ function updateModeUI() {
 
   document.getElementById('targetSourceHeading').textContent = (admixture || closer) ? 'Source' : 'Target';
   document.getElementById('targetSourceInputLabel').innerHTML = (admixture || closer)
-    ? 'Paste one or more G25 lines — <span style="color:var(--text-2)">Name,c1,c2,…,c25</span>'
+    ? 'Paste one or more G25 lines (one per source) — <span style="color:var(--text-2)">Name,c1,c2,…,c25</span>'
     : 'Paste one G25 line — <span style="color:var(--text-2)">Name,c1,c2,…,c25</span>';
   document.getElementById('targetInput').placeholder = (admixture || closer)
     ? 'Source_A,0.0123,-0.0456,0.0789,...\nSource_B,0.0201,-0.0312,0.0645,...'
     : 'Target,0.0123,-0.0456,0.0789,...';
-  document.getElementById('setTargetBtn').textContent = (admixture || closer) ? 'Add source(s)' : 'Set target';
   sourceSelectorWrap.style.display = (admixture || closer) && sources.length ? 'block' : 'none';
   document.getElementById('generateBtn').textContent = admixture ? 'Generate admixture map' : closer ? 'Generate closer-to map' : 'Generate distance map';
 
@@ -2865,19 +2950,21 @@ document.getElementById('loadPresetBtn').addEventListener('click', () => {
   if (!preset) return;
   clearPopulations();
   preset.populations.forEach(p => addPopulation(p.name, p.vec, [p.lat, p.lng], p.visible !== false));
-  if (Array.isArray(preset.sources) && preset.sources.length) {
-    sources = preset.sources.map((s, i) => normalizeSource(s, i));
-    selectedSourceIndices = Array.isArray(preset.selectedSourceIndices)
-      ? preset.selectedSourceIndices.map(Number).filter(i => Number.isInteger(i) && i >= 0 && i < sources.length)
-      : [];
-    document.getElementById('targetInput').value = '';
-  } else {
-    sources = [];
-    selectedSourceIndices = [];
-  }
-  if (preset.mode === 'admixture' || preset.mode === 'distance' || preset.mode === 'closer') {
-    modeSelect.value = preset.mode;
-    currentMode = preset.mode;
+  // A preset only swaps the reference populations. Whatever target/sources
+  // are already entered stay exactly as they are (and so does the mode); the
+  // preset's own saved target/sources are only used when none are set yet.
+  if (!sources.length) {
+    if (Array.isArray(preset.sources) && preset.sources.length) {
+      sources = preset.sources.map((s, i) => normalizeSource(s, i));
+      selectedSourceIndices = Array.isArray(preset.selectedSourceIndices)
+        ? preset.selectedSourceIndices.map(Number).filter(i => Number.isInteger(i) && i >= 0 && i < sources.length)
+        : [];
+      writeSourcesToInput();
+    }
+    if (preset.mode === 'admixture' || preset.mode === 'distance' || preset.mode === 'closer') {
+      modeSelect.value = preset.mode;
+      currentMode = preset.mode;
+    }
   }
   updateModeUI();
   target = currentMode === 'distance' && sources.length ? sources[0] : null;
