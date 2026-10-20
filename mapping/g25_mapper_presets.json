@@ -19245,7 +19245,7 @@
         "visible": true
       },
       {
-        "name": "Spanish_Andalusia_East_(n=15)",
+        "name": "Spanish_Andalusia_West_(n=15)",
         "vec": [
           0.10606341,
           0.14774725,
@@ -25320,9 +25320,6 @@
   },
   {
     "name": "Iron Age",
-    "mode": "distance",
-    "sources": [],
-    "selectedSourceIndices": [],
     "populations": [
       {
         "name": "Italy_Veneto_IA-Roman_Republic_Cisalpine_Gaul_(Cenomani)_Verona_(West_Med_Profile)_(n=10)",
