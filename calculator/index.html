@@ -743,6 +743,14 @@
   .aadr-cell.aadr-id:hover { text-decoration: underline; }
   .aadr-cell.aadr-id.aadr-nog25 { color: var(--text-2); cursor: default; }
   .aadr-cell.aadr-id.aadr-nog25:hover { text-decoration: none; }
+  /* Alt+drag block (column) selection */
+  .aadr-scroll.aadr-alt-held .aadr-cell { cursor: crosshair; }
+  .aadr-scroll.aadr-selecting, .aadr-scroll.aadr-selecting * { user-select: none; cursor: crosshair; }
+  .aadr-cell.aadr-sel {
+    background: rgba(79,184,166,0.22);
+    background: color-mix(in srgb, var(--accent) 24%, transparent);
+    color: var(--text-0);
+  }
 
   /* ---------- Donate button + modal ---------- */
   #donateBtn {
@@ -5100,6 +5108,9 @@
       d.timer = null;
       d.ticking = false;
       d.rangeSet = new Set(d.rangeKeys);
+      d.sel = null;            // block selection {k0,c0,k1,c1} in filtered-row / column space
+      d.selDragging = false;
+      d.selSuppressClick = false;
     }
 
     function explEl(key, suffix) { return document.getElementById(EXPL[key].prefix + suffix); }
@@ -5141,7 +5152,9 @@
       explUpdateStatus(key);
       explEl(key, 'Spacer').style.height = (d.filtered.length * EXPL_ROW_H) + 'px';
       d.scrollEl.addEventListener('scroll', function () { explOnScroll(key); });
+      explSelAttach(key);
       d.scrollEl.addEventListener('click', function (e) {
+        if (e.altKey || d.selSuppressClick) { d.selSuppressClick = false; return; }
         const cell = e.target.closest('.aadr-id');
         if (cell) explCopyOne(key, parseInt(cell.getAttribute('data-ri'), 10));
       });
@@ -5344,6 +5357,7 @@
         out.push(i);
       }
       d.filtered = out;
+      d.sel = null;
       explResortIndicesOnly(key);
       explUpdateStatus(key);
       explEl(key, 'Spacer').style.height = (d.filtered.length * EXPL_ROW_H) + 'px';
@@ -5374,7 +5388,9 @@
       const d = EXPL[key];
       if (d.sortCol === colIdx) { d.sortDir = -d.sortDir; }
       else { d.sortCol = colIdx; d.sortDir = 1; }
+      d.sel = null;
       explResortIndicesOnly(key);
+      explUpdateStatus(key);
       explUpdateHeaderIndicators(key);
       d.scrollEl.scrollTop = 0;
       explRenderWindow(key);
@@ -5396,7 +5412,7 @@
       const statusEl = explEl(key, 'Status');
       if (statusEl) {
         statusEl.textContent = d.filtered.length.toLocaleString() + ' of ' + rows.length.toLocaleString() +
-          ' samples \u00b7 ' + withG25.toLocaleString() + ' with G25 coordinates';
+          ' samples \u00b7 ' + withG25.toLocaleString() + ' with G25 coordinates' + explSelStatus(key);
       }
       const btn = explEl(key, 'CopyAll');
       if (btn) btn.textContent = 'copy all (' + withG25.toLocaleString() + ')';
@@ -5409,18 +5425,22 @@
       requestAnimationFrame(function () { d.ticking = false; explRenderWindow(key); });
     }
 
-    function explRowHtml(key, ri, row) {
+    function explRowHtml(key, ri, row, k) {
       const d = EXPL[key], cols = explCols(key);
+      const b = explSelBounds(key);
+      const rowSel = b && k >= b.r0 && k <= b.r1;
       let cells = '';
       const hasG25 = row[d.g25Index] !== null && row[d.g25Index] !== undefined;
       for (let c = 0; c < cols.length; c++) {
         const v = row[c];
         const disp = (v === null || v === undefined) ? '' : escapeHtml(String(v));
         if (c === 0) {
-          cells += '<div class="aadr-cell aadr-id' + (hasG25 ? '' : ' aadr-nog25') + '" data-ri="' + ri + '" title="' +
+          cells += '<div class="aadr-cell aadr-id' + (hasG25 ? '' : ' aadr-nog25') +
+            (rowSel && c >= b.c0 && c <= b.c1 ? ' aadr-sel' : '') + '" data-ri="' + ri + '" title="' +
             (hasG25 ? 'Click to copy G25 coordinates' : 'No G25 coordinates available') + '">' + disp + '</div>';
         } else {
-          cells += '<div class="aadr-cell" title="' + disp + '">' + disp + '</div>';
+          cells += '<div class="aadr-cell' + (rowSel && c >= b.c0 && c <= b.c1 ? ' aadr-sel' : '') +
+            '" title="' + disp + '">' + disp + '</div>';
         }
       }
       return '<div class="aadr-row">' + cells + '</div>';
@@ -5440,7 +5460,7 @@
       let html = '';
       for (let k = startIndex; k < endIndex; k++) {
         const ri = d.filtered[k];
-        html += explRowHtml(key, ri, rows[ri]);
+        html += explRowHtml(key, ri, rows[ri], k);
       }
       windowEl.innerHTML = html;
     }
@@ -5480,6 +5500,191 @@
       if (!lines.length) { showNotification('No samples with G25 coordinates in the current filter.', 1); return; }
       explCopyText(lines.join('\n'), 'Copied ' + lines.length.toLocaleString() + ' sample' + (lines.length === 1 ? '' : 's') + '.');
     }
+
+    /* ===== Alt+drag block (column) selection =====
+       Hold Alt and drag across cells to select a rectangle (e.g. one column, many
+       rows), like column selection in a text editor. Because the table is
+       virtualised (only visible rows exist in the DOM), the selection is stored in
+       data coordinates and copied straight from the dataset, so it can span any
+       number of rows, with auto-scroll while dragging past an edge.
+         Alt+drag          select block
+         Alt+Shift+click   extend the current block to the clicked cell
+         Ctrl/Cmd+C        copy block as tab-separated text (full cell values)
+         Esc / plain click clear the selection */
+
+    function explSelBounds(key) {
+      const s = EXPL[key].sel;
+      if (!s) return null;
+      return { r0: Math.min(s.k0, s.k1), r1: Math.max(s.k0, s.k1),
+               c0: Math.min(s.c0, s.c1), c1: Math.max(s.c0, s.c1) };
+    }
+
+    function explSelStatus(key) {
+      const b = explSelBounds(key);
+      if (!b) return '';
+      const nr = b.r1 - b.r0 + 1, nc = b.c1 - b.c0 + 1;
+      return ' \u00b7 selected ' + nr.toLocaleString() + ' row' + (nr === 1 ? '' : 's') + ' \u00d7 ' +
+        nc + ' column' + (nc === 1 ? '' : 's') + ' (Ctrl+C to copy, Esc to clear)';
+    }
+
+    // Map a viewport point to {k, c} (filtered row position, column), clamped.
+    function explSelHit(key, clientX, clientY) {
+      const d = EXPL[key], el = d.scrollEl, rect = el.getBoundingClientRect();
+      const y = clientY - rect.top - el.clientTop + el.scrollTop - EXPL_HEADER_OFFSET;
+      const x = clientX - rect.left - el.clientLeft + el.scrollLeft;
+      const n = d.filtered.length;
+      const k = Math.max(0, Math.min(n - 1, Math.floor(y / EXPL_ROW_H)));
+      let c = 0, acc = 0;
+      for (c = 0; c < d.widths.length - 1; c++) {
+        acc += d.widths[c];
+        if (x < acc) break;
+      }
+      if (x < 0) c = 0;
+      return { k: k, c: Math.min(c, explCols(key).length - 1) };
+    }
+
+    function explSelRefresh(key) {
+      explRenderWindow(key);
+      explUpdateStatus(key);
+    }
+
+    function explSelClear(key) {
+      const d = EXPL[key];
+      if (!d.sel) return;
+      d.sel = null;
+      explSelRefresh(key);
+    }
+
+    function explSelAttach(key) {
+      const d = EXPL[key], el = d.scrollEl;
+      let lastX = 0, lastY = 0, raf = 0;
+
+      function inBody(e) {
+        // Only data cells start a selection (not the header / filter inputs).
+        return !!e.target.closest('.aadr-window');
+      }
+
+      function autoScrollLoop() {
+        raf = 0;
+        if (!d.selDragging) return;
+        const rect = el.getBoundingClientRect();
+        const top = rect.top + EXPL_HEADER_OFFSET, bottom = rect.top + el.clientHeight;
+        const left = rect.left, right = rect.left + el.clientWidth;
+        let dy = 0, dx = 0;
+        if (lastY < top + 10) dy = -Math.min(60, (top + 10 - lastY) / 2 + 4);
+        else if (lastY > bottom - 10) dy = Math.min(60, (lastY - bottom + 10) / 2 + 4);
+        if (lastX < left + 10) dx = -Math.min(40, (left + 10 - lastX) / 2 + 4);
+        else if (lastX > right - 10) dx = Math.min(40, (lastX - right + 10) / 2 + 4);
+        if (dx || dy) {
+          el.scrollTop += dy; el.scrollLeft += dx;
+          updateFocus();
+          raf = requestAnimationFrame(autoScrollLoop);
+        }
+      }
+
+      function updateFocus() {
+        const h = explSelHit(key, lastX, lastY);
+        if (d.sel && (h.k !== d.sel.k1 || h.c !== d.sel.c1)) {
+          d.sel.k1 = h.k; d.sel.c1 = h.c;
+          explSelRefresh(key);
+        }
+      }
+
+      function onMove(e) {
+        lastX = e.clientX; lastY = e.clientY;
+        updateFocus();
+        if (!raf) raf = requestAnimationFrame(autoScrollLoop);
+      }
+
+      function onUp() {
+        d.selDragging = false;
+        el.classList.remove('aadr-selecting');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      }
+
+      el.addEventListener('mousedown', function (e) {
+        d.selSuppressClick = false;
+        if (e.button !== 0) return;
+        if (!e.altKey) {
+          // A plain click inside the rows drops the block selection.
+          if (d.sel && inBody(e)) explSelClear(key);
+          return;
+        }
+        if (!inBody(e) || !d.filtered.length) return;
+        e.preventDefault();               // no native text selection / drag
+        const sel = window.getSelection && window.getSelection();
+        if (sel && sel.removeAllRanges) sel.removeAllRanges();
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+        d.selSuppressClick = true;        // don't trigger the G25 copy on the ID column
+        lastX = e.clientX; lastY = e.clientY;
+        const h = explSelHit(key, e.clientX, e.clientY);
+        if (e.shiftKey && d.sel) { d.sel.k1 = h.k; d.sel.c1 = h.c; }
+        else d.sel = { k0: h.k, c0: h.c, k1: h.k, c1: h.c };
+        d.selDragging = true;
+        el.classList.add('aadr-selecting');
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        explSelRefresh(key);
+      });
+    }
+
+    function explSelCopy(key) {
+      const d = EXPL[key], b = explSelBounds(key), rows = explRows(key);
+      if (!b) return false;
+      const lines = [];
+      for (let k = b.r0; k <= b.r1; k++) {
+        const row = rows[d.filtered[k]];
+        const parts = [];
+        for (let c = b.c0; c <= b.c1; c++) {
+          const v = row[c];
+          parts.push((v === null || v === undefined) ? '' : String(v).replace(/[\t\r\n]+/g, ' '));
+        }
+        lines.push(parts.join('\t'));
+      }
+      const nr = b.r1 - b.r0 + 1, nc = b.c1 - b.c0 + 1;
+      explCopyText(lines.join('\n'), 'Copied ' + nr.toLocaleString() + ' row' + (nr === 1 ? '' : 's') +
+        ' \u00d7 ' + nc + ' column' + (nc === 1 ? '' : 's') + '.');
+      return true;
+    }
+
+    // The explorer whose tab is currently visible and has a block selection.
+    function explSelActiveKey() {
+      for (const k in EXPL) {
+        const d = EXPL[k];
+        if (d.sel && d.scrollEl && d.scrollEl.offsetParent !== null) return k;
+      }
+      return null;
+    }
+
+    document.addEventListener('keydown', function (e) {
+      // Visual hint: crosshair over cells while Alt is held.
+      if (e.key === 'Alt') {
+        for (const k in EXPL) if (EXPL[k].scrollEl) EXPL[k].scrollEl.classList.add('aadr-alt-held');
+      }
+      const key = explSelActiveKey();
+      if (!key) return;
+      const ae = document.activeElement;
+      const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable);
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'c' || e.key === 'C')) {
+        // Let a normal copy from a text box win if it has text selected.
+        if (typing && ae.selectionStart !== ae.selectionEnd) return;
+        e.preventDefault();
+        explSelCopy(key);
+      } else if (e.key === 'Escape' && !typing) {
+        explSelClear(key);
+      }
+    });
+    document.addEventListener('keyup', function (e) {
+      if (e.key === 'Alt') {
+        e.preventDefault(); // stops Firefox/Windows from opening the menu bar after an Alt+drag
+        for (const k in EXPL) if (EXPL[k].scrollEl) EXPL[k].scrollEl.classList.remove('aadr-alt-held');
+      }
+    });
+    window.addEventListener('blur', function () {
+      for (const k in EXPL) if (EXPL[k].scrollEl) EXPL[k].scrollEl.classList.remove('aadr-alt-held');
+    });
 
     // Back-compat wrappers for the original AADR entry points.
     function aadrInit() { explInit('aadr'); }
