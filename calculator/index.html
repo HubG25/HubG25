@@ -750,6 +750,9 @@
     color: var(--text-1);
   }
   .aadr-cell.aadr-id { color: var(--accent); cursor: pointer; }
+  /* Population-name cells: click to copy every sample carrying that name. */
+  .aadr-cell.aadr-pop { color: var(--accent-2); cursor: pointer; }
+  .aadr-cell.aadr-pop:hover { text-decoration: underline; }
   .aadr-cell.aadr-id:hover { text-decoration: underline; }
   .aadr-cell.aadr-id.aadr-nog25 { color: var(--text-2); cursor: default; }
   .aadr-cell.aadr-id.aadr-nog25:hover { text-decoration: none; }
@@ -5088,6 +5091,7 @@
         // filter unambiguously starts a range rather than a negative number
         // (Latitude/Longitude are excluded for exactly that reason).
         rangeKeys: ['pgid', 'datemean', 'datesd', 'snps'],
+        popCols: [6],                  // Group ID: click to copy the whole group
         label: function (row) { return (row[6] || '') + ':' + (row[0] || ''); },
         idIndex: 0,
         missing: 'AADR data failed to load.'
@@ -5103,16 +5107,20 @@
           return this._cols || (this._cols = AKB_ORDER.slice(0, AKBARI_COLUMNS.length).map(function (i) { return AKBARI_COLUMNS[i]; }));
         },
         widths: [210, 200, 190, 130, 110, 80, 130, 90, 90, 100, 120, 340],
+        popCols: [0, 1],               // Sample label, Assigned label
         g25Index: 12,
         rangeKeys: ['datemean', 'coverage'],
-        // Akbari2026_<Sample_label>.<SUFFIX>:<GeneticID>, where SUFFIX is the
-        // genetic ID's last ".XX" part (e.g. .TW, .AG, .SG). Spaces become
-        // underscores; unlabeled samples are named "Unlabeled".
+        // Akbari2026_<name>.<SUFFIX>:<GeneticID>, where SUFFIX is the genetic
+        // ID's last ".XX" part (e.g. .TW, .AG, .SG). The name is the Akbari
+        // Sample label; where Akbari gives none, the G25 Assigned label is used
+        // instead. Spaces become underscores; samples with neither are
+        // named "Unlabeled".
         label: function (row) {
           const gid = String(row[2] || '');
           const dot = gid.lastIndexOf('.');
           const suffix = dot > 0 ? gid.slice(dot) : '';
-          let pop = row[0] ? String(row[0]).trim().replace(/\s*;\s*/g, '/').replace(/\s+/g, '_') : 'Unlabeled';
+          const src = row[0] || row[1];
+          let pop = src ? String(src).trim().replace(/\s*;\s*/g, '/').replace(/\s+/g, '_') : 'Unlabeled';
           // A few source labels already carry the suffix (e.g. "..._Gothic.TW"); don't double it.
           if (suffix && pop.endsWith(suffix)) pop = pop.slice(0, -suffix.length);
           return 'Akbari2026_' + pop + suffix + ':' + gid;
@@ -5187,6 +5195,11 @@
       explSelAttach(key);
       d.scrollEl.addEventListener('click', function (e) {
         if (e.altKey || d.selSuppressClick) { d.selSuppressClick = false; return; }
+        const pop = e.target.closest('.aadr-pop');
+        if (pop) {
+          explCopyPop(key, parseInt(pop.getAttribute('data-pc'), 10), pop.getAttribute('data-pv'));
+          return;
+        }
         const cell = e.target.closest('.aadr-id');
         if (cell) explCopyOne(key, parseInt(cell.getAttribute('data-ri'), 10));
       });
@@ -5466,10 +5479,17 @@
       for (let c = 0; c < cols.length; c++) {
         const v = row[c];
         const disp = (v === null || v === undefined) ? '' : escapeHtml(String(v));
-        if (c === 0) {
+        const isPop = d.popCols && d.popCols.indexOf(c) !== -1 && disp !== '';
+        if (c === (d.idIndex || 0)) {
           cells += '<div class="aadr-cell aadr-id' + (hasG25 ? '' : ' aadr-nog25') +
             (rowSel && c >= b.c0 && c <= b.c1 ? ' aadr-sel' : '') + '" data-ri="' + ri + '" title="' +
             (hasG25 ? 'Click to copy G25 coordinates' : 'No G25 coordinates available') + '">' + disp + '</div>';
+        } else if (isPop) {
+          const n = (explPopIndex(key, c).get(String(v)) || []).length;
+          cells += '<div class="aadr-cell aadr-pop' +
+            (rowSel && c >= b.c0 && c <= b.c1 ? ' aadr-sel' : '') +
+            '" data-pc="' + c + '" data-pv="' + disp + '" title="Click to copy all ' + n +
+            ' sample' + (n === 1 ? '' : 's') + ' labelled ' + disp + '">' + disp + '</div>';
         } else {
           cells += '<div class="aadr-cell' + (rowSel && c >= b.c0 && c <= b.c1 ? ' aadr-sel' : '') +
             '" title="' + disp + '">' + disp + '</div>';
@@ -5495,6 +5515,40 @@
         html += explRowHtml(key, ri, rows[ri], k);
       }
       windowEl.innerHTML = html;
+    }
+
+    // Map of population name -> row indices, for one column of one dataset.
+    // Built once per column on first use; the row arrays never change.
+    function explPopIndex(key, c) {
+      const d = EXPL[key];
+      d.popIdx = d.popIdx || {};
+      if (d.popIdx[c]) return d.popIdx[c];
+      const rows = explRows(key), m = new Map();
+      for (let i = 0; i < rows.length; i++) {
+        const v = rows[i][c];
+        if (v === null || v === undefined || v === '') continue;
+        const k = String(v);
+        const a = m.get(k);
+        if (a) a.push(i); else m.set(k, [i]);
+      }
+      d.popIdx[c] = m;
+      return m;
+    }
+
+    // Copy every sample sharing one population name. Deliberately dataset-wide
+    // rather than filter-scoped: "copy all" already covers the current filter.
+    function explCopyPop(key, c, value) {
+      const d = EXPL[key], rows = explRows(key);
+      const members = explPopIndex(key, c).get(value) || [];
+      const lines = [];
+      for (const ri of members) {
+        const g25 = rows[ri][d.g25Index];
+        if (!g25) continue;
+        lines.push(d.label(rows[ri]) + ',' + g25);
+      }
+      if (!lines.length) { showNotification('No G25 coordinates for ' + value + '.', 1); return; }
+      explCopyText(lines.join('\n'), 'Copied ' + lines.length.toLocaleString() +
+        ' sample' + (lines.length === 1 ? '' : 's') + ' of ' + value + '.');
     }
 
     function explCopyText(text, msg) {
