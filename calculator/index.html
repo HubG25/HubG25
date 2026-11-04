@@ -5089,19 +5089,40 @@
         // (Latitude/Longitude are excluded for exactly that reason).
         rangeKeys: ['pgid', 'datemean', 'datesd', 'snps'],
         label: function (row) { return (row[6] || '') + ':' + (row[0] || ''); },
+        idIndex: 0,
         missing: 'AADR data failed to load.'
       },
       akbari: {
         prefix: 'akb',
-        getRows: function () { return AKBARI_ROWS; },
-        getCols: function () { return AKBARI_COLUMNS; },
-        widths: [190, 130, 210, 110, 80, 130, 90, 90, 100, 120, 340],
+        // The source table is ordered Genetic ID, Individual ID, Sample label, ...;
+        // the explorer shows Sample label first. Reordered once, on first use.
+        getRows: function () {
+          return this._rows || (this._rows = AKBARI_ROWS.map(function (r) { return AKB_ORDER.map(function (i) { return r[i]; }); }));
+        },
+        getCols: function () {
+          return this._cols || (this._cols = AKB_ORDER.slice(0, AKBARI_COLUMNS.length).map(function (i) { return AKBARI_COLUMNS[i]; }));
+        },
+        widths: [210, 190, 130, 110, 80, 130, 90, 90, 100, 120, 340],
         g25Index: 11,
         rangeKeys: ['datemean', 'coverage'],
-        label: function (row) { return 'Akbari2026:' + (row[0] || ''); },
+        // Akbari2026_<Sample_label>.<SUFFIX>:<GeneticID>, where SUFFIX is the
+        // genetic ID's last ".XX" part (e.g. .TW, .AG, .SG). Spaces become
+        // underscores; unlabeled samples are named "Unlabeled".
+        label: function (row) {
+          const gid = String(row[1] || '');
+          const dot = gid.lastIndexOf('.');
+          const suffix = dot > 0 ? gid.slice(dot) : '';
+          let pop = row[0] ? String(row[0]).trim().replace(/\s*;\s*/g, '/').replace(/\s+/g, '_') : 'Unlabeled';
+          // A few source labels already carry the suffix (e.g. "..._Gothic.TW"); don't double it.
+          if (suffix && pop.endsWith(suffix)) pop = pop.slice(0, -suffix.length);
+          return 'Akbari2026_' + pop + suffix + ':' + gid;
+        },
+        idIndex: 1,
         missing: 'Akbari 2026 data failed to load.'
       }
     };
+    // Column order for the Akbari explorer: Sample label, Genetic ID, Individual ID, then the rest.
+    const AKB_ORDER = [2, 0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
     const EXPL_ROW_H = 30, EXPL_HEADER_H = 30, EXPL_FILTER_H = 30,
       EXPL_HEADER_OFFSET = EXPL_HEADER_H + EXPL_FILTER_H, EXPL_BUFFER = 8;
@@ -5496,7 +5517,7 @@
       const d = EXPL[key], row = explRows(key)[ri];
       const g25 = row[d.g25Index];
       if (!g25) { showNotification('No G25 coordinates for this individual.', 1); return; }
-      explCopyText(d.label(row) + ',' + g25, 'Copied G25 coordinates for ' + (row[0] || 'this individual') + '.');
+      explCopyText(d.label(row) + ',' + g25, 'Copied G25 coordinates for ' + (row[d.idIndex] || 'this individual') + '.');
     }
 
     function explCopyAll(key) {
