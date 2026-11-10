@@ -3258,7 +3258,13 @@
       return String(s).replace(/&lt;/g, "<").replace(/&gt;/g, ">");
     }
 
-    function singleGhost(table, byIndex, targetName) {
+    function ghostFmt(v) {
+      const s = v.toFixed(6);
+      return /^-0\.0+$/.test(s) ? s.slice(1) : s;
+    }
+
+    function singleGhost(table, byIndex, targetRow) {
+      const targetName = targetRow[0];
       const coords = new Array(dimensions).fill(0);
       const parts = [];
       let total = 0, byName = null, used = null;
@@ -3291,13 +3297,16 @@
       }
       if (!(total > 0)) return null;
       parts.sort(function (a, b) { return b.w - a.w; });
-      const vals = coords.map(function (v) {
-        const s = (v / total).toFixed(6);
-        return /^-0\.0+$/.test(s) ? s.slice(1) : s;
-      });
+      const model = coords.map(function (v) { return v / total; });
+      // residual = target - model, from unrounded values
+      const resid = model.map(function (v, j) { return targetRow[j + 1] - v; });
       const label = ghostDecode(targetName) + "_model";
+      const residLabel = ghostDecode(targetName) + "_residual";
       const recipe = parts.map(function (p) { return (100 * p.w / total).toFixed(1) + "% " + ghostDecode(p.name); }).join("\n");
-      SINGLE_GHOSTS.push({ line: label + "," + vals.join(","), label: label, recipe: recipe });
+      SINGLE_GHOSTS.push({
+        line: label + "," + model.map(ghostFmt).join(","), label: label, recipe: recipe,
+        residLine: residLabel + "," + resid.map(ghostFmt).join(","), residLabel: residLabel
+      });
       return SINGLE_GHOSTS.length - 1;
     }
 
@@ -3307,6 +3316,8 @@
       return '<div class="ghost-actions nonselectable">' +
         '<button class="buttons small" onclick="singleCopyGhost(' + id + ')" title="' +
         escapeHtml("Copy G25 coordinates of the fitted mixture:\n" + g.recipe) + '">copy&nbsp;model&nbsp;coordinates</button>' +
+        '<button class="buttons small" onclick="singleCopyResidual(' + id + ')" title="' +
+        escapeHtml("Copy the residual (target minus model), per coordinate") + '">copy&nbsp;residual</button>' +
         '</div>';
     }
 
@@ -3314,6 +3325,12 @@
       const g = SINGLE_GHOSTS[id];
       if (!g) { showNotification("No model coordinates stored for this result.", 1); return; }
       explCopyText(g.line, "Copied coordinates of " + g.label + ".");
+    }
+
+    function singleCopyResidual(id) {
+      const g = SINGLE_GHOSTS[id];
+      if (!g) { showNotification("No model coordinates stored for this result.", 1); return; }
+      explCopyText(g.residLine, "Copied residual " + g.residLabel + " (target − model).");
     }
 
     function singleFMC(targetId) {
@@ -3348,7 +3365,7 @@
         condFail(condInfeasibleMsg(nPop));
         return;
       }
-      const ghostId = singleGhost(resultsTable, nPop == 0, targetArray[targetId][0]);
+      const ghostId = singleGhost(resultsTable, nPop == 0, targetArray[targetId]);
       if (aggregate) {
         resultsTable = aggregateResults(resultsTable, sourceNumLocal);
       }
