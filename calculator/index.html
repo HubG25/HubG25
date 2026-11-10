@@ -3399,20 +3399,9 @@
       output.innerHTML = '<div class="outcard">' + what + '</div>' + output.innerHTML;
     }
 
-    function restoreLookupFull(which) {
-      const ta = document.getElementById(which);
-      const input = document.getElementById(which + "Lookup");
-      if (!ta) return;
-      if (ta.dataset.filtering && ta.dataset.fullValue !== undefined) {
-        ta.value = ta.dataset.fullValue;
-        ta.dataset.filtering = "";
-      }
-      if (input) input.value = "";
-      ta.dataset.fullValue = ta.value;
-    }
     function processInput() {
-      restoreLookupFull("source");
-      restoreLookupFull("target");
+      // Source/target .value always returns the full dataset (see the filter
+      // section), so the filter stays in place across tab changes and runs.
       // Re-run if data changed OR target buttons not yet built for existing data
       const needsButtons = document.getElementById("distancetargets") &&
         document.getElementById("distancetargets").children.length === 0 &&
@@ -4098,11 +4087,9 @@
     let cgenPopIndex = new Map(); // lowercased name -> {name, vec}
 
     function cgenRawTextarea(id) {
-      // lookupFilter() may be showing a filtered subset; fall back to the full text.
+      // .value is the full dataset even while the filter shows a subset.
       const ta = document.getElementById(id);
-      if (!ta) return "";
-      if (ta.dataset.filtering && ta.dataset.fullValue !== undefined) return ta.dataset.fullValue;
-      return ta.value;
+      return ta ? ta.value : "";
     }
 
     function cgenCollectPops() {
@@ -4443,28 +4430,108 @@
     }
 
     
+    /* ===== Source / target filter =====
+       While a filter is active the textarea shows only matching lines, but the
+       full dataset is kept in LOOKUP_STATE. Edits made in the filtered view
+       (deleting, changing or adding lines) are merged back into the full
+       dataset. The textareas' .value is overridden so every other piece of code
+       reads and writes the full dataset, never the filtered view. */
+    const LOOKUP_STATE = {};
+    const TA_VALUE = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+
+    function lookupInstall(id) {
+      const ta = document.getElementById(id);
+      if (!ta || LOOKUP_STATE[id]) return;
+      const st = LOOKUP_STATE[id] = { active: false, lines: [], shown: [], view: [], cache: null };
+      Object.defineProperty(ta, "value", {
+        configurable: true,
+        get: function () {
+          if (!st.active) return TA_VALUE.get.call(ta);
+          if (st.cache === null) st.cache = st.lines.join("\n");
+          return st.cache;
+        },
+        set: function (v) {
+          if (!st.active) { TA_VALUE.set.call(ta, v); return; }
+          st.lines = String(v).replace(/\r\n/g, "\n").split("\n");
+          st.cache = null;
+          lookupRender(id);
+        }
+      });
+      ta.addEventListener("input", function () { lookupMerge(id); });
+    }
+
+    function lookupRender(id) {
+      const ta = document.getElementById(id), st = LOOKUP_STATE[id];
+      const input = document.getElementById(id + "Lookup");
+      const query = qParseCached(input.value.trim());
+      st.shown = [];
+      for (let i = 0; i < st.lines.length; i++) if (qMatch(query, st.lines[i])) st.shown.push(i);
+      st.view = st.shown.map(function (i) { return st.lines[i]; });
+      TA_VALUE.set.call(ta, st.view.join("\n"));
+    }
+
+    // Fold an edit of the filtered view back into the full dataset. The change
+    // is located as the block between the unchanged leading and trailing lines.
+    function lookupMerge(id) {
+      const st = LOOKUP_STATE[id];
+      if (!st || !st.active) return;
+      const ta = document.getElementById(id);
+      const txt = TA_VALUE.get.call(ta);
+      const oldV = st.view, newV = txt === "" ? [] : txt.split("\n");
+      const oN = oldV.length, nN = newV.length;
+      let p = 0;
+      while (p < oN && p < nN && oldV[p] === newV[p]) p++;
+      let q = 0;
+      while (q < oN - p && q < nN - p && oldV[oN - 1 - q] === newV[nN - 1 - q]) q++;
+      const rem = st.shown.slice(p, oN - q), ins = newV.slice(p, nN - q);
+      if (!rem.length && !ins.length) return;
+      if (rem.length === ins.length) {
+        for (let k = 0; k < rem.length; k++) st.lines[rem[k]] = ins[k];
+      } else {
+        let anchor;
+        if (rem.length) anchor = rem[0];
+        else if (p > 0) anchor = st.shown[p - 1] + 1;
+        else if (q > 0) anchor = st.shown[oN - q];
+        else anchor = st.lines.length;
+        const remSet = new Set(rem), shownSet = new Set(st.shown);
+        const lines = [], shown = [];
+        for (let i = 0; i <= st.lines.length; i++) {
+          if (i === anchor) for (const l of ins) { shown.push(lines.length); lines.push(l); }
+          if (i === st.lines.length) break;
+          if (remSet.has(i)) continue;
+          if (shownSet.has(i)) shown.push(lines.length);
+          lines.push(st.lines[i]);
+        }
+        st.lines = lines;
+        st.shown = shown;
+      }
+      st.view = newV;
+      st.cache = null;
+      inputHasChanged = true;
+    }
+
     function lookupFilter(which) {
       const ta = document.getElementById(which);
       const input = document.getElementById(which + "Lookup");
       if (!ta || !input) return;
-      if (!ta.dataset.fullValue) ta.dataset.fullValue = ta.value;
-      // When user types in textarea, keep fullValue in sync if no active filter
+      lookupInstall(which);
+      const st = LOOKUP_STATE[which];
       const q = input.value.trim();
       if (!q) {
-        if (ta.dataset.fullValue !== undefined) {
-          // don't overwrite if user has been editing filtered view — only restore when clearing
+        if (st.active) {
+          const full = ta.value;
+          st.active = false;
+          st.lines = []; st.shown = []; st.view = []; st.cache = null;
+          TA_VALUE.set.call(ta, full);
         }
         return;
       }
-      // Store original on first filter
-      if (!ta.dataset.filtering) {
-        ta.dataset.fullValue = ta.value;
-        ta.dataset.filtering = "1";
+      if (!st.active) {
+        st.lines = TA_VALUE.get.call(ta).split("\n");
+        st.cache = null;
+        st.active = true;
       }
-      const lines = (ta.dataset.fullValue || "").split("\n");
-      const query = qParseCached(q);
-      const filtered = lines.filter(l => qMatch(query, l));
-      ta.value = filtered.join("\n");
+      lookupRender(which);
     }
     // Custom Gen defaults to Ghost Generator on first load
     document.addEventListener("DOMContentLoaded", function() {
@@ -4472,31 +4539,12 @@
       if (modeSel) { modeSel.value = "ghost"; cgenSwitchMode(); cgenRenderGhost(); }
     });
 
-    // Clear filter state when user edits source/target directly after filtering
-    document.addEventListener("DOMContentLoaded", function() {
-      ["source", "target"].forEach(id => {
-        const ta = document.getElementById(id);
-        const input = document.getElementById(id + "Lookup");
-        if (!ta || !input) return;
-        ta.addEventListener("input", function() {
-          if (!input.value.trim()) {
-            ta.dataset.fullValue = ta.value;
-            ta.dataset.filtering = "";
-          }
-        });
-        input.addEventListener("input", function() {
-          if (!this.value.trim()) {
-            if (ta.dataset.fullValue !== undefined && ta.dataset.filtering) {
-              ta.value = ta.dataset.fullValue;
-            }
-            ta.dataset.filtering = "";
-            ta.dataset.fullValue = ta.value;
-          } else {
-            lookupFilter(id);
-          }
-        });
-      });
-    });
+    // Install the full-dataset .value on source/target as early as possible.
+    (function () {
+      function inst() { lookupInstall("source"); lookupInstall("target"); }
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", inst);
+      else inst();
+    })();
 
     
     /* ===== Stability Checker (NNLS + bootstrap) ===== */
