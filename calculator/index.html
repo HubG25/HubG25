@@ -682,6 +682,13 @@
   .pie-leg-name {
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+  .pie-side {
+    flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .pie-side .pie-legend { flex: none; }
+  .ghost-actions { display: flex; flex-wrap: wrap; gap: 0.4em; margin: 0.6em 0 0.2em; }
+  .pie-side .ghost-actions { margin: 0; }
+  .ghost-actions .buttons { margin: 0; }
 
   /* ---------- AADR v66 Explorer ---------- */
   .aadr-table-wrap {
@@ -3190,8 +3197,9 @@
       "#748ffc","#ff922b","#51cf66","#cc5de8"
     ];
 
-    function buildPieSvg(resultsTable, size) {
+    function buildPieSvg(resultsTable, size, extraHtml) {
       size = size || 200;
+      extraHtml = extraHtml || "";
       const cx = size / 2, cy = size / 2, r = size * 0.42;
       const colors = PIE_COLORS;
       let total = 0;
@@ -3235,9 +3243,78 @@
         legHtml += `<div class="pie-leg-row"><span class="pie-swatch" style="background:${it.col}"></span><span class="pie-leg-pct">${it.pct}%</span><span class="pie-leg-name">${it.name}</span></div>`;
       }
       legHtml += '</div>';
+      if (extraHtml) legHtml = '<div class="pie-side">' + legHtml + extraHtml + '</div>';
       return `<div class="pie-wrap"><svg class="pie-svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${paths}</svg>${legHtml}</div>`;
     }
 
+
+    /* Coordinates of the fitted mixture ("ghost") of a Single run. Computed from
+       the per-line weights before aggregation, so a label that groups several
+       lines (e.g. "z_Excess_ME:Lebanon_MBA", "z_Excess_ME:...") contributes
+       only the coordinates of the subgroups the model actually used. */
+    const SINGLE_GHOSTS = [];
+
+    function ghostDecode(s) {
+      return String(s).replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+    }
+
+    function singleGhost(table, byIndex, targetName) {
+      const coords = new Array(dimensions).fill(0);
+      const parts = [];
+      let total = 0, byName = null, used = null;
+      if (!byIndex) {
+        byName = new Map(); used = new Map();
+        for (let i = 0; i < sourceArray.length; i++) {
+          const n = sourceArray[i][0];
+          if (!byName.has(n)) byName.set(n, []);
+          byName.get(n).push(i);
+        }
+      }
+      for (let i = 0; i < table.length; i++) {
+        const name = table[i][0], w = table[i][1];
+        let idx;
+        if (byIndex) {
+          idx = i;
+        } else {
+          // duplicate labels are consumed in source order, matching how nPops lists them
+          const list = byName.get(name);
+          if (!list) return null;
+          const k = used.get(name) || 0;
+          used.set(name, k + 1);
+          idx = list[Math.min(k, list.length - 1)];
+        }
+        if (!(w > 0)) continue;
+        const row = sourceArray[idx];
+        for (let j = 0; j < dimensions; j++) coords[j] += w * row[j + 1];
+        total += w;
+        parts.push({ name: name, w: w });
+      }
+      if (!(total > 0)) return null;
+      parts.sort(function (a, b) { return b.w - a.w; });
+      const vals = coords.map(function (v) {
+        const s = (v / total).toFixed(6);
+        return /^-0\.0+$/.test(s) ? s.slice(1) : s;
+      });
+      const label = ghostDecode(targetName) + "_model";
+      const recipe = parts.map(function (p) { return (100 * p.w / total).toFixed(1) + "% " + ghostDecode(p.name); }).join("\n");
+      SINGLE_GHOSTS.push({ line: label + "," + vals.join(","), label: label, recipe: recipe });
+      return SINGLE_GHOSTS.length - 1;
+    }
+
+    function ghostButtonsHtml(id) {
+      if (id === null || id === undefined) return "";
+      const g = SINGLE_GHOSTS[id];
+      return '<div class="ghost-actions nonselectable">' +
+        '<button class="buttons small" onclick="singleCopyGhost(' + id + ')" title="' +
+        escapeHtml("Copy G25 coordinates of the fitted mixture:\n" + g.recipe) + '">copy&nbsp;model&nbsp;coordinates</button>' +
+        '</div>';
+    }
+
+    function singleCopyGhost(id) {
+      const g = SINGLE_GHOSTS[id];
+      if (!g) { showNotification("No model coordinates stored for this result.", 1); return; }
+      explCopyText(g.line, "Copied coordinates of " + g.label + ".");
+    }
 
     function singleFMC(targetId) {
       let i, outputMsg, currentResult, sourceNumLocal = sourceNum,
@@ -3271,6 +3348,7 @@
         condFail(condInfeasibleMsg(nPop));
         return;
       }
+      const ghostId = singleGhost(resultsTable, nPop == 0, targetArray[targetId][0]);
       if (aggregate) {
         resultsTable = aggregateResults(resultsTable, sourceNumLocal);
       }
@@ -3293,7 +3371,9 @@
         }
       }
       outputMsg += "</table>";
-      if (showPie) outputMsg += buildPieSvg(resultsTable, 220);
+      const ghostHtml = ghostButtonsHtml(ghostId);
+      const pieHtml = showPie ? buildPieSvg(resultsTable, 220, ghostHtml) : "";
+      outputMsg += pieHtml || ghostHtml;
       printOutput(outputMsg, "singleoutput");
     }
 
