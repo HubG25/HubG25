@@ -889,40 +889,133 @@
     const DATASET_PATH = "calculator/datasets";
     const DATASET_API = `https://api.github.com/repos/${DATASET_REPO}/contents/${DATASET_PATH}?ref=${DATASET_BRANCH}`;
     const DATASET_RAW = `https://raw.githubusercontent.com/${DATASET_REPO}/${DATASET_BRANCH}/${DATASET_PATH}/`;
+    /* Listing fallback: jsDelivr's metadata API lists repo files without GitHub's
+       60-requests/hour-per-IP limit for anonymous API calls. Only the *list* comes
+       from here; the files themselves still download from raw.githubusercontent.com. */
+    const DATASET_JSDELIVR = `https://data.jsdelivr.com/v1/packages/gh/${DATASET_REPO}@${DATASET_BRANCH}?structure=flat`;
+    const DATASET_CACHE_KEY = "hubg25-dataset-list";
+    const DATASET_CACHE_TTL = 30 * 60 * 1000; // reuse the list for 30 min instead of hitting the API on every load
     let discoveredDatasets = []; // { name, file, url }
 
-    async function discoverDatasets() {
+    function datasetEntry(fileName) {
+      const base = fileName.replace(/_dataset\.txt$/i, "");
+      const label = base.replace(/[_]+/g, " ").trim();
+      return { name: label || base, file: fileName, url: DATASET_RAW + encodeURIComponent(fileName) };
+    }
+
+    function sortDatasets(list) {
+      return list.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    function readDatasetCache() {
+      try {
+        const c = JSON.parse(localStorage.getItem(DATASET_CACHE_KEY));
+        if (c && Array.isArray(c.list) && c.list.length) return c;
+      } catch (e) {}
+      return null;
+    }
+
+    function writeDatasetCache(list) {
+      try { localStorage.setItem(DATASET_CACHE_KEY, JSON.stringify({ time: Date.now(), list })); } catch (e) {}
+    }
+
+    async function listFromGitHubApi() {
+      const res = await fetch(DATASET_API, { headers: { Accept: "application/vnd.github+json" } });
+      if (!res.ok) {
+        const remaining = res.headers.get("x-ratelimit-remaining");
+        const reset = parseInt(res.headers.get("x-ratelimit-reset"), 10);
+        const err = new Error("GitHub API " + res.status);
+        if ((res.status === 403 || res.status === 429) && remaining === "0") {
+          err.rateLimited = true;
+          if (isFinite(reset)) err.resetAt = new Date(reset * 1000);
+        }
+        throw err;
+      }
+      const files = await res.json();
+      if (!Array.isArray(files)) throw new Error("Unexpected API response");
+      return files
+        .filter(f => f && f.type === "file" && /_dataset\.txt$/i.test(f.name))
+        .map(f => {
+          const d = datasetEntry(f.name);
+          if (f.download_url) d.url = f.download_url;
+          return d;
+        });
+    }
+
+    async function listFromJsDelivr() {
+      const res = await fetch(DATASET_JSDELIVR);
+      if (!res.ok) throw new Error("jsDelivr " + res.status);
+      const data = await res.json();
+      if (!data || !Array.isArray(data.files)) throw new Error("Unexpected jsDelivr response");
+      const prefix = "/" + DATASET_PATH.replace(/^\/+|\/+$/g, "") + "/";
+      return data.files
+        .map(f => f && f.name)
+        .filter(n => typeof n === "string" && n.startsWith(prefix))
+        .map(n => n.slice(prefix.length))
+        .filter(n => n && !n.includes("/") && /_dataset\.txt$/i.test(n))
+        .map(datasetEntry);
+    }
+
+    async function discoverDatasets(force = false) {
       const containers = [
         document.getElementById("datasetButtonsLoad"),
         document.getElementById("datasetButtonsDownload"),
         document.getElementById("datasetButtonsSource")
       ];
-      containers.forEach(c => { if (c) c.innerHTML = '<div class="hint" style="padding:8px;">Loading datasets from GitHub…</div>'; });
-      try {
-        const res = await fetch(DATASET_API, { headers: { Accept: "application/vnd.github+json" } });
-        if (!res.ok) throw new Error("GitHub API " + res.status);
-        const files = await res.json();
-        if (!Array.isArray(files)) throw new Error("Unexpected API response");
-        discoveredDatasets = files
-          .filter(f => f && f.type === "file" && /_dataset\.txt$/i.test(f.name))
-          .map(f => {
-            const base = f.name.replace(/_dataset\.txt$/i, "");
-            const label = base.replace(/[_]+/g, " ").trim();
-            return { name: label || base, file: f.name, url: f.download_url || (DATASET_RAW + encodeURIComponent(f.name).replace(/%2F/g, "/")) };
-          })
-          .sort((a, b) => a.name.localeCompare(b.name));
+      const cached = readDatasetCache();
+
+      // 1. A recent cached list: no network request at all.
+      if (!force && cached && Date.now() - cached.time < DATASET_CACHE_TTL) {
+        discoveredDatasets = sortDatasets(cached.list);
         renderDatasetButtons();
-        if (!discoveredDatasets.length) {
-          containers.forEach(c => {
-            if (c) c.innerHTML = '<div class="hint" style="padding:8px;">No files matching *_dataset.txt found in the GitHub repo.</div>';
-          });
-        }
-      } catch (err) {
-        console.error("Dataset discovery failed:", err);
-        containers.forEach(c => {
-          if (c) c.innerHTML = '<div class="hint" style="padding:8px;color:var(--danger);">Could not load dataset list from GitHub. You can still open local files.</div>';
-        });
+        return;
       }
+
+      // Show the stale list right away (if any) while refreshing in the background.
+      if (cached) {
+        discoveredDatasets = sortDatasets(cached.list);
+        renderDatasetButtons();
+      } else {
+        containers.forEach(c => { if (c) c.innerHTML = '<div class="hint" style="padding:8px;">Loading datasets from GitHub…</div>'; });
+      }
+
+      // 2. GitHub API, then 3. jsDelivr.
+      let apiErr = null, list = null;
+      try { list = await listFromGitHubApi(); }
+      catch (e) {
+        apiErr = e;
+        console.warn("GitHub API listing failed, trying jsDelivr:", e);
+        try { list = await listFromJsDelivr(); }
+        catch (e2) { console.warn("jsDelivr listing failed:", e2); }
+      }
+
+      if (list && list.length) {
+        discoveredDatasets = sortDatasets(list);
+        writeDatasetCache(discoveredDatasets);
+        renderDatasetButtons();
+        return;
+      }
+      if (list && !list.length && !apiErr) {
+        discoveredDatasets = [];
+        containers.forEach(c => {
+          if (c) c.innerHTML = '<div class="hint" style="padding:8px;">No files matching *_dataset.txt found in the GitHub repo.</div>';
+        });
+        return;
+      }
+
+      // 4. Everything failed: keep the stale list if there is one.
+      if (cached) return;
+
+      console.error("Dataset discovery failed:", apiErr);
+      let why = "";
+      if (apiErr && apiErr.rateLimited) {
+        why = " GitHub's hourly limit for this network has been reached" +
+          (apiErr.resetAt ? " (resets at " + apiErr.resetAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + ")" : "") + ".";
+      }
+      containers.forEach(c => {
+        if (c) c.innerHTML = '<div class="hint" style="padding:8px;color:var(--danger);">Could not load dataset list from GitHub.' + why +
+          ' You can still open local files. <a href="#" onclick="discoverDatasets(true);return false;">Retry</a></div>';
+      });
     }
 
     function renderDatasetButtons() {
